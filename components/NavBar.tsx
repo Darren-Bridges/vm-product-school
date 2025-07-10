@@ -44,14 +44,22 @@ export function NavBar({ onOpenSidebar }: NavBarProps) {
           <Image src="/VMlogo.62080a51e68bffbddd39660df08de35e.svg" alt="VM Logo" width={32} height={32} priority />
         </Link>
       </div>
-      {/* Desktop: logo + Product School + Help Center */}
+      {/* Desktop: logo + Product School + Help Centre */}
       <div className="hidden md:flex items-center gap-2">
         <Link href="/">
           <Image src="/VMlogo.62080a51e68bffbddd39660df08de35e.svg" alt="VM Logo" width={32} height={32} priority />
         </Link>
         <Link href="/" className="font-bold text-lg">Product School</Link>
         <div className="mx-2 h-6 border-l border-gray-300" />
-        <Link href="/">Help Center</Link>
+        <Link href="/" >Help Centre</Link>
+        <Link
+          href="#"
+          aria-disabled="true"
+          tabIndex={-1}
+          className="ml-4 flex items-center gap-2 text-muted-foreground cursor-not-allowed select-none pointer-events-none"
+        >
+          Roadmap
+        </Link>
       </div>
       {shouldShowSearch && (
         <div className="flex-1 max-w-md mx-4 md:mx-8">

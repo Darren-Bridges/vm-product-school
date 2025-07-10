@@ -153,7 +153,7 @@ export default function AdminPage() {
                   <div className="h-5 w-5 mr-3 bg-gradient-to-r from-pink-500 to-orange-500 rounded"></div>
                   <div>
                     <div className="font-medium">Customize Theme</div>
-                    <div className="text-sm text-muted-foreground">Brand your help center</div>
+                    <div className="text-sm text-muted-foreground">Brand your help centre</div>
                   </div>
                 </Link>
               </div>

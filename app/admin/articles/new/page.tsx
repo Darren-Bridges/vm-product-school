@@ -105,7 +105,7 @@ export default function CreateArticlePage() {
       <div className="p-8">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-foreground">Create Article</h1>
-          <p className="text-muted-foreground mt-2">Add new content to your help center</p>
+          <p className="text-muted-foreground mt-2">Add new content to your help centre</p>
         </div>
         
         {/* Link Dialog outside the main form */}

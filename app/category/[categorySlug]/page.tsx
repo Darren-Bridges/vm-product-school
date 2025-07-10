@@ -152,7 +152,7 @@ export default function CategoryPage() {
         <div className="max-w-2xl mx-auto mt-32 text-center">
           <h1 className="text-3xl font-bold mb-4">Category Not Found</h1>
           <p className="text-muted-foreground mb-6">This category does not exist.</p>
-          <Link href="/" className="text-blue-600 hover:underline">Back to Help Center</Link>
+          <Link href="/" className="text-blue-600 hover:underline">Back to Help Centre</Link>
         </div>
       );
     }
@@ -230,7 +230,7 @@ export default function CategoryPage() {
         <div className="text-center py-12">
           <p className="text-muted-foreground text-lg">No articles found in this category.</p>
           <Link href="/" className="text-blue-600 hover:underline mt-4 inline-block">
-            Back to Help Center
+            Back to Help Centre
           </Link>
         </div>
       )}

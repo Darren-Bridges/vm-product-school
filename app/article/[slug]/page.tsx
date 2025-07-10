@@ -81,7 +81,7 @@ export default function ArticlePage() {
       <div className="max-w-2xl mx-auto mt-32 text-center">
         <h1 className="text-3xl font-bold mb-4">Article Not Found</h1>
         <p className="text-gray-500 mb-6">This article does not exist or is not published.</p>
-        <Link href="/" className="text-blue-600 hover:underline">Back to Help Center</Link>
+        <Link href="/" className="text-blue-600 hover:underline">Back to Help Centre</Link>
       </div>
     );
   }

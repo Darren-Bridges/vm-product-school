@@ -20,6 +20,7 @@ interface Article {
   slug: string;
   status?: string;
   content?: string;
+  created_at?: string;
 }
 
 export default function Home() {
@@ -29,6 +30,7 @@ export default function Home() {
   const [searchResults, setSearchResults] = useState<Article[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [whatsNew, setWhatsNew] = useState<Article[]>([]);
 
 
   useEffect(() => {
@@ -43,6 +45,20 @@ export default function Home() {
       setLoading(false);
     };
     fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    // Fetch the 5 most recently created published articles
+    const fetchWhatsNew = async () => {
+      const { data, error } = await supabase
+        .from("articles")
+        .select("id, title, slug, created_at, status, content")
+        .eq("status", "published")
+        .order("created_at", { ascending: false })
+        .limit(5);
+      if (!error && data) setWhatsNew(data);
+    };
+    fetchWhatsNew();
   }, []);
 
   // Live search with debounce
@@ -77,7 +93,7 @@ export default function Home() {
 
   return (
     <main className="max-w-3xl mx-auto p-8 mt-20">
-      <h1 className="text-3xl font-bold mb-2">Help Center</h1>
+      <h1 className="text-3xl font-bold mb-2">Help Centre</h1>
       <p className="mb-6 text-muted-foreground">Search for help articles or browse by category.</p>
       <div className="relative mb-8">
         <Input
@@ -140,6 +156,44 @@ export default function Home() {
           ))}
         </div>
       )}
+      {/* What's New Section below categories */}
+      <div className="mt-12">
+        <h2 className="text-xl font-semibold mb-4">What’s New</h2>
+        {loading && whatsNew.length === 0 ? (
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="bg-card border rounded-lg p-4">
+                <Skeleton className="h-6 w-1/2 mb-2" />
+                <Skeleton className="h-4 w-full mb-1" />
+                <Skeleton className="h-4 w-5/6" />
+              </div>
+            ))}
+          </div>
+        ) : whatsNew.length > 0 && (
+          <div className="space-y-4">
+            {whatsNew.map(article => (
+              <div key={article.id} className="bg-card border rounded-lg p-4">
+                <Link
+                  href={`/article/${article.slug}`}
+                  className="font-medium text-foreground hover:underline text-lg"
+                >
+                  {article.title}
+                </Link>
+                {article.content && (
+                  <div className="text-muted-foreground text-sm mt-2 line-clamp-2">
+                    {article.content.replace(/<[^>]+>/g, '').slice(0, 200)}
+                  </div>
+                )}
+                {article.created_at && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {new Date(article.created_at).toLocaleDateString()}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </main>
   );
 }

@@ -126,7 +126,7 @@ export default function CategoryArticlePage() {
       <div className="max-w-2xl mx-auto mt-32 text-center">
         <h1 className="text-3xl font-bold mb-4">Article Not Found</h1>
         <p className="text-gray-500 mb-6">This article does not exist or is not published.</p>
-        <Link href="/" className="text-blue-600 hover:underline">Back to Help Center</Link>
+        <Link href="/" className="text-blue-600 hover:underline">Back to Help Centre</Link>
       </div>
     );
   }
@@ -159,7 +159,7 @@ export default function CategoryArticlePage() {
       <main className="flex-1 px-8 md:px-16">
         <div className="mb-6">
           <nav className="text-sm text-muted-foreground mb-4">
-            <Link href="/" className="hover:text-foreground">Help Center</Link>
+            <Link href="/" className="hover:text-foreground">Help Centre</Link>
             <span className="mx-2">/</span>
             <Link href={`/category/${category.slug}`} className="hover:text-foreground">
               {category.name}

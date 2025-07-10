@@ -268,7 +268,7 @@ export default function EditArticlePage() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Edit Article</h1>
-            <p className="text-muted-foreground mt-2">Update your help center content</p>
+            <p className="text-muted-foreground mt-2">Update your help centre content</p>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

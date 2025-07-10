@@ -84,7 +84,7 @@ export default function AdminArticlesPage() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-0 md:gap-0">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Articles</h1>
-            <p className="text-muted-foreground mt-2">Manage your help center articles</p>
+            <p className="text-muted-foreground mt-2">Manage your help centre articles</p>
           </div>
           <Button asChild className="w-full md:w-auto mt-4 md:mt-0">
             <Link href="/admin/articles/new">Create Article</Link>
@@ -92,18 +92,39 @@ export default function AdminArticlesPage() {
         </div>
         
         {loading ? (
-          <div className="space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="bg-card p-6 rounded-lg border">
-                <div className="flex gap-4 items-center">
-                  <Skeleton className="h-6 w-1/3" />
-                  <Skeleton className="h-6 w-1/6" />
-                  <Skeleton className="h-6 w-1/4" />
-                  <Skeleton className="h-6 w-1/4" />
-                  <Skeleton className="h-6 w-16" />
-                </div>
-              </div>
-            ))}
+          <div>
+            <div className="flex items-center gap-4 mb-4">
+              <Skeleton className="h-10 w-64 rounded" /> {/* Search bar skeleton */}
+              <Skeleton className="h-10 w-10 rounded" /> {/* Columns dropdown skeleton */}
+            </div>
+            <div className="overflow-x-auto rounded-lg border bg-card">
+              <table className="min-w-full divide-y divide-border">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Title</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Author</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Categories</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Access Level</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Created</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {[...Array(5)].map((_, i) => (
+                    <tr key={i}>
+                      <td className="px-4 py-3"><Skeleton className="h-5 w-32" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-5 w-24" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-5 w-24" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-5 w-16" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-5 w-20" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-5 w-24" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-8 w-16 rounded" /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         ) : error ? (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
