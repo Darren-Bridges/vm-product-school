@@ -906,10 +906,21 @@
       .help-widget__article-content.tiptap ul,
       .help-widget__article-content.tiptap ol {
         margin: 0 0 15px 20px;
+        padding-left: 20px;
+        list-style-position: outside;
+      }
+      
+      .help-widget__article-content.tiptap ul {
+        list-style-type: disc;
+      }
+      
+      .help-widget__article-content.tiptap ol {
+        list-style-type: decimal;
       }
       
       .help-widget__article-content.tiptap li {
         margin: 0 0 5px 0;
+        display: list-item;
       }
       
       .help-widget__article-content.tiptap a {
@@ -1094,6 +1105,15 @@
       .help-widget--dark .help-widget__article-content.tiptap mark {
         background: #fbbf24;
         color: #1a1a1a;
+      }
+      
+      .help-widget--dark .help-widget__article-content.tiptap ul,
+      .help-widget--dark .help-widget__article-content.tiptap ol {
+        color: #e0e0e0;
+      }
+      
+      .help-widget--dark .help-widget__article-content.tiptap li {
+        color: #e0e0e0;
       }
       
       /* Brand header styles */
