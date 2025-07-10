@@ -1,7 +1,7 @@
 "use client";
 
 import { SidebarNav } from "./ui/sidebar-nav";
-import { FileText, FolderOpen, PlayCircle, Palette, Settings, X } from "lucide-react";
+import { FileText, FolderOpen, PlayCircle, Palette, Settings, X, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AdminLayoutProps {
@@ -16,6 +16,7 @@ const navigation = [
   { name: "Categories", href: "/admin/categories", icon: <FolderOpen className="w-4 h-4" /> },
   { name: "Product Tours", href: "/admin/tours", icon: <PlayCircle className="w-4 h-4" /> },
   { name: "Theming", href: "/admin/theme", icon: <Palette className="w-4 h-4" /> },
+  { name: "Notifications", href: "/admin/notifications", icon: <Bell className="w-4 h-4" /> },
 ];
 
 export function AdminLayout({ children, sidebarOpen, setSidebarOpen }: AdminLayoutProps) {
