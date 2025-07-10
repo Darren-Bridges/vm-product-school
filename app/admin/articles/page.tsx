@@ -83,8 +83,8 @@ export default function AdminArticlesPage() {
       <div className="p-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-0 md:gap-0">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Articles</h1>
-            <p className="text-gray-600 mt-2">Manage your help center articles</p>
+            <h1 className="text-3xl font-bold text-foreground">Articles</h1>
+            <p className="text-muted-foreground mt-2">Manage your help center articles</p>
           </div>
           <Button asChild className="w-full md:w-auto mt-4 md:mt-0">
             <Link href="/admin/articles/new">Create Article</Link>
@@ -94,7 +94,7 @@ export default function AdminArticlesPage() {
         {loading ? (
           <div className="space-y-4">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="bg-white p-6 rounded-lg border">
+              <div key={i} className="bg-card p-6 rounded-lg border">
                 <div className="flex gap-4 items-center">
                   <Skeleton className="h-6 w-1/3" />
                   <Skeleton className="h-6 w-1/6" />
@@ -110,9 +110,9 @@ export default function AdminArticlesPage() {
             <div className="text-red-800">Error: {error}</div>
           </div>
         ) : articles.length === 0 ? (
-          <div className="bg-white border rounded-lg p-8 text-center">
-            <div className="text-gray-500 mb-4">No articles found</div>
-            <p className="text-gray-400 mb-6">Get started by creating your first article</p>
+          <div className="bg-card border rounded-lg p-8 text-center">
+            <div className="text-muted-foreground mb-4">No articles found</div>
+            <p className="text-muted-foreground mb-6">Get started by creating your first article</p>
             <Button asChild>
               <Link href="/admin/articles/new">Create Your First Article</Link>
             </Button>

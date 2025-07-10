@@ -447,14 +447,14 @@ export default function CategoriesPage() {
     const currentIndex = siblings.findIndex(c => c.id === category.id);
 
     return (
-      <div key={category.id} className={cn("space-y-2", level > 0 ? "sm:ml-6 border-l-2 border-gray-100 pl-3" : "")}>
-        <div className="bg-white rounded-lg border">
+      <div key={category.id} className={cn("space-y-2", level > 0 ? "sm:ml-6 border-l-2 border-border pl-3" : "")}>
+        <div className="bg-card rounded-lg border">
           <div className="p-4 border-b">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div className="flex items-center gap-2" style={{ marginLeft: `${level * 8}px` }}>
                 <button
                   onClick={() => toggleCategoryExpanded(category.id)}
-                  className="p-1 hover:bg-gray-100 rounded"
+                  className="p-1 hover:bg-accent rounded"
                 >
                   {isExpanded ? (
                     <ChevronDown className="w-4 h-4" />
@@ -463,8 +463,8 @@ export default function CategoriesPage() {
                   )}
                 </button>
                 <Folder className="w-4 h-4 text-blue-500" />
-                <h3 className="font-medium text-gray-900 text-base sm:text-lg">{category.name}</h3>
-                <span className="text-xs sm:text-sm text-gray-500">
+                <h3 className="font-medium text-foreground text-base sm:text-lg">{category.name}</h3>
+                <span className="text-xs sm:text-sm text-muted-foreground">
                   ({category.articles?.length || 0} articles)
                 </span>
               </div>
@@ -519,20 +519,20 @@ export default function CategoriesPage() {
               </div>
             </div>
             {category.description && (
-              <p className="text-xs sm:text-sm text-gray-600 mt-1 ml-7 sm:ml-8">{category.description}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1 ml-7 sm:ml-8">{category.description}</p>
             )}
           </div>
           {/* Articles section */}
           {isExpanded && hasArticles && (
-            <div className="border-t bg-gray-50">
-              <div className="p-2 text-xs font-medium text-gray-600 bg-gray-100">
+            <div className="border-t bg-muted">
+              <div className="p-2 text-xs font-medium text-muted-foreground bg-accent">
                 Articles in this category
               </div>
               <div className="p-2 space-y-2">
                 {category.articles!.map((article) => (
                   <div
                     key={article.id}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-2 bg-white rounded border"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-2 bg-card rounded border"
                     style={{ marginLeft: `${level * 8}px` }}
                   >
                     <div className="flex items-center gap-2">
@@ -554,8 +554,8 @@ export default function CategoriesPage() {
           )}
           {/* Child categories section */}
           {isExpanded && hasChildren && (
-            <div className="border-t bg-gray-50">
-              <div className="p-2 text-xs font-medium text-gray-600 bg-gray-100">
+            <div className="border-t bg-muted">
+              <div className="p-2 text-xs font-medium text-muted-foreground bg-accent">
                 Subcategories
               </div>
               <div className="p-2 space-y-2">
@@ -569,8 +569,8 @@ export default function CategoriesPage() {
           )}
           {/* Empty state when expanded but no content */}
           {isExpanded && !hasArticles && !hasChildren && (
-            <div className="p-4 border-t bg-gray-50">
-              <div className="text-center py-4 text-gray-500 border-2 border-dashed border-gray-300 rounded">
+            <div className="p-4 border-t bg-muted">
+              <div className="text-center py-4 text-muted-foreground border-2 border-dashed border-border rounded">
                 No articles or subcategories in this category
               </div>
             </div>
@@ -585,12 +585,12 @@ export default function CategoriesPage() {
       <ProtectedAdminLayout>
         <div className="p-8">
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold text-gray-900">Categories</h1>
+            <h1 className="text-3xl font-bold text-foreground">Categories</h1>
             <Skeleton className="h-10 w-32" />
           </div>
           <div className="space-y-4">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="bg-white p-6 rounded-lg border">
+              <div key={i} className="bg-card p-6 rounded-lg border">
                 <div className="flex gap-4 items-center">
                   <Skeleton className="h-6 w-1/3" />
                   <Skeleton className="h-6 w-1/3" />
@@ -610,8 +610,8 @@ export default function CategoriesPage() {
       <div className="p-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-0 md:gap-0">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Categories</h1>
-            <p className="text-gray-600 mt-2">Organize your content with categories and articles</p>
+            <h1 className="text-3xl font-bold text-foreground">Categories</h1>
+            <p className="text-muted-foreground mt-2">Organize your content with categories and articles</p>
           </div>
           <Button onClick={handleCreate} className="w-full md:w-auto mt-4 md:mt-0">
             <Plus className="w-4 h-4 mr-2" />
@@ -628,12 +628,12 @@ export default function CategoriesPage() {
         <div className="grid grid-cols-1 gap-6">
           {/* Categories with Articles */}
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-gray-900">Categories & Articles</h2>
+            <h2 className="text-xl font-semibold text-foreground">Categories & Articles</h2>
             
             {categories.length === 0 ? (
-              <div className="bg-white border rounded-lg p-8 text-center">
-                <div className="text-gray-500 mb-4">No categories found</div>
-                <p className="text-gray-400 mb-6">Create your first category to organize your content</p>
+              <div className="bg-card border rounded-lg p-8 text-center">
+                <div className="text-muted-foreground mb-4">No categories found</div>
+                <p className="text-muted-foreground mb-6">Create your first category to organize your content</p>
                 <Button onClick={handleCreate}>
                   <Plus className="w-4 h-4 mr-2" />
                   Create Your First Category
@@ -684,7 +684,7 @@ export default function CategoriesPage() {
                     className="w-full px-3 py-2 border rounded"
                     required
                   />
-                  <p className="text-xs text-gray-500 mt-1">This will be the category URL: /category/{slug || '<slug>'}</p>
+                  <p className="text-xs text-muted-foreground mt-1">This will be the category URL: /category/{slug || '<slug>'}</p>
                 </div>
                 <div>
                   <label htmlFor="description" className="block text-sm font-medium mb-1">
@@ -746,7 +746,7 @@ export default function CategoriesPage() {
                 {articles.map(article => {
                   const alreadyInCategory = selectedCategory?.articles?.some(a => a.id === article.id);
                   return (
-                    <div key={article.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                    <div key={article.id} className="flex items-center justify-between p-3 bg-muted rounded">
                       <div className="flex items-center gap-2">
                         <FileText className="w-4 h-4 text-blue-500" />
                         <span>{article.title}</span>
@@ -766,7 +766,7 @@ export default function CategoriesPage() {
                   );
                 })}
                 {articles.length === 0 && (
-                  <div className="text-center py-4 text-gray-500">
+                  <div className="text-center py-4 text-muted-foreground">
                     No articles available
                   </div>
                 )}

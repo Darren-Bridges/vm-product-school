@@ -42,13 +42,13 @@ export function AdminLayout({ children, sidebarOpen, setSidebarOpen }: AdminLayo
         {/* Sidebar panel */}
         <aside
           className={cn(
-            "relative w-64 bg-white h-full shadow-xl transition-transform duration-300 ease-in-out",
+            "relative w-64 bg-background h-full shadow-xl transition-transform duration-300 ease-in-out",
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           )}
         >
           {/* Close button */}
           <button
-            className="absolute top-4 right-4 p-2 rounded-md hover:bg-gray-100"
+            className="absolute top-4 right-4 p-2 rounded-md hover:bg-accent"
             onClick={() => setSidebarOpen(false)}
             aria-label="Close sidebar"
           >
@@ -62,13 +62,13 @@ export function AdminLayout({ children, sidebarOpen, setSidebarOpen }: AdminLayo
       </div>
 
       {/* Desktop sidebar */}
-      <aside className="fixed left-0 top-[4rem] h-[calc(100vh-4rem)] w-56 border-r bg-white flex-shrink-0 flex flex-col z-40 hidden md:flex">
+      <aside className="fixed left-0 top-[4rem] h-[calc(100vh-4rem)] w-56 border-r bg-background flex-shrink-0 flex flex-col z-40 hidden md:flex">
         <div className="h-16 flex items-center px-6 border-b font-bold text-lg">Admin Panel</div>
         <SidebarNav items={navigation} />
       </aside>
 
       {/* Main content */}
-      <main className="md:ml-56 px-2 py-6 md:p-8 bg-gray-50 min-h-[calc(100vh-4rem)] mt-4 md:mt-8">{children}</main>
+      <main className="md:ml-56 px-2 py-6 md:p-8 bg-background min-h-[calc(100vh-4rem)] mt-4 md:mt-8">{children}</main>
     </>
   );
 } 

@@ -27,8 +27,8 @@ export function ProtectedAdminLayout({ children }: ProtectedAdminLayoutProps) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -37,11 +37,11 @@ export function ProtectedAdminLayout({ children }: ProtectedAdminLayoutProps) {
   // If not logged in, show login prompt
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="max-w-md w-full space-y-8 text-center">
           <div>
-            <h2 className="text-3xl font-bold text-gray-900">Access Required</h2>
-            <p className="mt-2 text-gray-600">
+            <h2 className="text-3xl font-bold text-foreground">Access Required</h2>
+            <p className="mt-2 text-muted-foreground">
               You need to be logged in to access the admin panel.
             </p>
           </div>
@@ -66,11 +66,11 @@ export function ProtectedAdminLayout({ children }: ProtectedAdminLayoutProps) {
     }
     
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="max-w-md w-full space-y-8 text-center">
           <div>
-            <h2 className="text-3xl font-bold text-gray-900">Access Denied</h2>
-            <p className="mt-2 text-gray-600">
+            <h2 className="text-3xl font-bold text-foreground">Access Denied</h2>
+            <p className="mt-2 text-muted-foreground">
               You don&apos;t have permission to access the admin panel.
             </p>
           </div>

@@ -17,6 +17,7 @@ import {
 } from "./ui/dropdown-menu";
 import Image from "next/image";
 import { Menu } from "lucide-react";
+import { ThemeToggle } from "./theme-toggle";
 
 interface NavBarProps {
   onOpenSidebar?: () => void;
@@ -36,7 +37,7 @@ export function NavBar({ onOpenSidebar }: NavBarProps) {
   const isAdminPage = mounted && pathname.startsWith("/admin");
 
   return (
-    <nav className="fixed top-0 left-0 w-full z-50 bg-white h-16 flex items-center justify-between border-b px-6">
+    <nav className="fixed top-0 left-0 w-full z-50 bg-background h-16 flex items-center justify-between border-b px-6">
       {/* Mobile: show logo to the left of search bar */}
       <div className="flex items-center md:hidden mr-2">
         <Link href="/">
@@ -58,10 +59,11 @@ export function NavBar({ onOpenSidebar }: NavBarProps) {
         </div>
       )}
       <div className="flex items-center gap-4">
+        <ThemeToggle />
         {/* Hamburger menu for admin pages on mobile */}
         {isAdminPage && (
           <button
-            className="md:hidden mr-2 p-2 rounded-md bg-white border shadow-sm hover:bg-gray-50"
+            className="md:hidden mr-2 p-2 rounded-md bg-background border shadow-sm hover:bg-accent"
             aria-label="Open sidebar"
             onClick={onOpenSidebar}
             type="button"

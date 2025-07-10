@@ -147,22 +147,22 @@ export default function CategoryPage() {
     );
   }
 
-  if (notFound || !category) {
-    return (
-      <div className="max-w-2xl mx-auto mt-32 text-center">
-        <h1 className="text-3xl font-bold mb-4">Category Not Found</h1>
-        <p className="text-gray-500 mb-6">This category does not exist.</p>
-        <Link href="/" className="text-blue-600 hover:underline">Back to Help Center</Link>
-      </div>
-    );
-  }
+      if (notFound || !category) {
+      return (
+        <div className="max-w-2xl mx-auto mt-32 text-center">
+          <h1 className="text-3xl font-bold mb-4">Category Not Found</h1>
+          <p className="text-muted-foreground mb-6">This category does not exist.</p>
+          <Link href="/" className="text-blue-600 hover:underline">Back to Help Center</Link>
+        </div>
+      );
+    }
 
   return (
     <div className="max-w-5xl mx-auto mt-20 p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">{category.name}</h1>
         {category.description && (
-          <p className="text-gray-600 text-lg">{category.description}</p>
+          <p className="text-muted-foreground text-lg">{category.description}</p>
         )}
       </div>
 
@@ -175,11 +175,11 @@ export default function CategoryPage() {
               <Link
                 key={article.id}
                 href={`/category/${category.slug}/${article.slug}`}
-                className="block p-4 bg-white border rounded-lg hover:shadow-md transition"
+                className="block p-4 bg-card border rounded-lg hover:shadow-md transition"
               >
                 <h3 className="font-semibold text-lg mb-1">{article.title}</h3>
                 {article.content && (
-                  <p className="text-gray-600 text-sm line-clamp-2">
+                  <p className="text-muted-foreground text-sm line-clamp-2">
                     {article.content.replace(/<[^>]+>/g, '').slice(0, 150)}
                     {article.content.replace(/<[^>]+>/g, '').length > 150 ? '…' : ''}
                   </p>
@@ -197,7 +197,7 @@ export default function CategoryPage() {
             <div key={subcategory.id}>
               <h2 className="text-xl font-semibold mb-4">{subcategory.name}</h2>
               {subcategory.description && (
-                <p className="text-gray-600 mb-4">{subcategory.description}</p>
+                <p className="text-muted-foreground mb-4">{subcategory.description}</p>
               )}
               {subcategory.articles.length > 0 ? (
                 <div className="space-y-3">
@@ -205,11 +205,11 @@ export default function CategoryPage() {
                     <Link
                       key={article.id}
                       href={`/category/${category.slug}/${article.slug}`}
-                      className="block p-4 bg-white border rounded-lg hover:shadow-md transition"
+                      className="block p-4 bg-card border rounded-lg hover:shadow-md transition"
                     >
                       <h3 className="font-semibold text-lg mb-1">{article.title}</h3>
                       {article.content && (
-                        <p className="text-gray-600 text-sm line-clamp-2">
+                        <p className="text-muted-foreground text-sm line-clamp-2">
                           {article.content.replace(/<[^>]+>/g, '').slice(0, 150)}
                           {article.content.replace(/<[^>]+>/g, '').length > 150 ? '…' : ''}
                         </p>
@@ -218,7 +218,7 @@ export default function CategoryPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-500 italic">No articles in this subcategory yet.</p>
+                <p className="text-muted-foreground italic">No articles in this subcategory yet.</p>
               )}
             </div>
           ))}
@@ -228,7 +228,7 @@ export default function CategoryPage() {
       {/* No content message */}
       {articles.length === 0 && subcategories.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">No articles found in this category.</p>
+          <p className="text-muted-foreground text-lg">No articles found in this category.</p>
           <Link href="/" className="text-blue-600 hover:underline mt-4 inline-block">
             Back to Help Center
           </Link>

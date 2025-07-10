@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { NavBar } from "../components/NavBar";
 import { AuthProvider } from "../context/AuthContext";
+import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
   title: "VM product school",
@@ -14,12 +15,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
-        <AuthProvider>
-          <NavBar />
-          {children}
-        </AuthProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <AuthProvider>
+            <NavBar />
+            {children}
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
