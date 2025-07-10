@@ -104,8 +104,8 @@ export default function CreateArticlePage() {
     <ProtectedAdminLayout>
       <div className="p-8">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Create Article</h1>
-          <p className="text-gray-600 mt-2">Add new content to your help center</p>
+          <h1 className="text-3xl font-bold text-foreground">Create Article</h1>
+          <p className="text-muted-foreground mt-2">Add new content to your help center</p>
         </div>
         
         {/* Link Dialog outside the main form */}
@@ -211,7 +211,7 @@ export default function CreateArticlePage() {
                       className="w-full px-3 py-2 border rounded"
                       required
                     />
-                    <p className="text-xs text-gray-500 mt-1">This will be the article URL: /article/{slug || '<slug>'}</p>
+                    <p className="text-xs text-muted-foreground mt-1">This will be the article URL: /article/{slug || '<slug>'}</p>
                   </div>
                   
                   <div>
@@ -230,7 +230,7 @@ export default function CreateArticlePage() {
                         </option>
                       ))}
                     </select>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {accessLevel === 'vm_internal' && 'Only superadmin users can view this article'}
                       {accessLevel === 'external_clients' && 'Any logged in user can view this article'}
                       {accessLevel === 'public' && 'Anyone can view this article (logged in or not)'}

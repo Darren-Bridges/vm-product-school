@@ -104,7 +104,7 @@ export default function CategoryArticlePage() {
 
   if (loading) {
     return (
-      <div className="flex max-w-5xl mx-auto mt-20 gap-8 p-4 md:p-8">
+      <div className="flex w-full mt-20 gap-8 p-4 md:p-8">
         <aside className="w-64 hidden md:block">
           <div className="space-y-2">
             {[...Array(5)].map((_, i) => (
@@ -113,9 +113,9 @@ export default function CategoryArticlePage() {
           </div>
         </aside>
         <main className="flex-1">
-          <Skeleton className="h-10 w-[90vw] max-w-xl mx-auto mb-6" />
-          <Skeleton className="h-6 w-[80vw] max-w-lg mx-auto mb-2" />
-          <Skeleton className="h-96 w-[95vw] max-w-2xl mx-auto" />
+          <Skeleton className="h-10 w-full mb-6" />
+          <Skeleton className="h-6 w-full mb-2" />
+          <Skeleton className="h-96 w-full" />
         </main>
       </div>
     );
@@ -132,12 +132,13 @@ export default function CategoryArticlePage() {
   }
 
   return (
-    <div className="flex max-w-5xl mx-auto mt-20 gap-8 p-4 md:p-8">
+    <div className="flex w-full mt-20 gap-8 p-4 md:p-8">
+      {/* Desktop sidebar */}
       <aside className="w-64 hidden md:block border-r pr-6">
         <div className="mb-6">
           <Link 
             href={`/category/${category.slug}`}
-            className="text-sm text-gray-500 hover:text-gray-700 mb-2 block"
+            className="text-sm text-muted-foreground hover:text-foreground mb-2 block"
           >
             ← Back to {category.name}
           </Link>
@@ -148,28 +149,43 @@ export default function CategoryArticlePage() {
             <Link
               key={a.id}
               href={`/category/${category.slug}/${a.slug}`}
-              className="block text-gray-700 hover:text-blue-600 hover:underline truncate"
+              className="block text-foreground hover:text-blue-600 hover:underline truncate"
             >
               {a.title}
             </Link>
           ))}
         </nav>
       </aside>
-      <main className="flex-1">
+      <main className="flex-1 px-8 md:px-16">
         <div className="mb-6">
-          <nav className="text-sm text-gray-500 mb-4">
-            <Link href="/" className="hover:text-gray-700">Help Center</Link>
+          <nav className="text-sm text-muted-foreground mb-4">
+            <Link href="/" className="hover:text-foreground">Help Center</Link>
             <span className="mx-2">/</span>
-            <Link href={`/category/${category.slug}`} className="hover:text-gray-700">
+            <Link href={`/category/${category.slug}`} className="hover:text-foreground">
               {category.name}
             </Link>
             <span className="mx-2">/</span>
-            <span className="text-gray-900">{article.title}</span>
+            <span className="text-foreground">{article.title}</span>
           </nav>
           <h1 className="text-3xl font-bold mb-6">{article.title}</h1>
         </div>
-        <div className="prose prose-neutral max-w-none">
+        <div className="w-full">
           <ArticleContentViewer content={article.content} />
+        </div>
+        {/* Mobile related articles below content */}
+        <div className="block md:hidden mt-12">
+          <h2 className="text-lg font-semibold mb-4">More in {category.name}</h2>
+          <nav className="space-y-2">
+            {otherArticles.map(a => (
+              <Link
+                key={a.id}
+                href={`/category/${category.slug}/${a.slug}`}
+                className="block text-foreground hover:text-blue-600 hover:underline truncate"
+              >
+                {a.title}
+              </Link>
+            ))}
+          </nav>
         </div>
       </main>
     </div>
