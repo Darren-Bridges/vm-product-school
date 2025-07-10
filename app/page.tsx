@@ -1,10 +1,145 @@
+"use client";
+import { useEffect, useState, useRef } from "react";
+import { supabase } from "../lib/supabaseClient";
+import Link from "next/link";
+import { Input } from "@/components/ui/input";
+
+import { Skeleton } from "@/components/ui/skeleton";
+
+interface Category {
+  id: string;
+  name: string;
+  description?: string;
+  order?: number;
+  parent_id?: string | null;
+  slug?: string;
+}
+interface Article {
+  id: string;
+  title: string;
+  slug: string;
+  status?: string;
+  content?: string;
+}
+
 export default function Home() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [searchResults, setSearchResults] = useState<Article[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("categories")
+        .select("id, name, description, order, parent_id, slug")
+        .is("parent_id", null)
+        .order("order", { ascending: true });
+      if (!error && data) setCategories(data);
+      setLoading(false);
+    };
+    fetchCategories();
+  }, []);
+
+  // Live search with debounce
+  useEffect(() => {
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    if (!search) {
+      setSearchResults([]);
+      setShowDropdown(false);
+      return;
+    }
+    searchTimeout.current = setTimeout(async () => {
+      const query = supabase
+        .from("articles")
+        .select("id, title, slug, status, content")
+        .ilike("title", `%${search}%`)
+        .eq("status", "published")
+        .limit(5);
+      const { data, error } = await query;
+      if (!error && data) {
+        setSearchResults(data);
+        setShowDropdown(true);
+      } else {
+        setSearchResults([]);
+        setShowDropdown(false);
+      }
+    }, 300);
+    // Cleanup
+    return () => {
+      if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    };
+  }, [search]);
+
   return (
-    <main className="p-8">
-      <h1 className="text-2xl font-bold mb-4">Welcome to the Product School Help Center</h1>
-      <p className="mb-6">Search for help articles, browse categories, or start a product tour.</p>
-      {/* TODO: Add search bar and list of popular articles */}
-      <div className="bg-gray-100 p-4 rounded">Search and popular articles coming soon.</div>
+    <main className="max-w-3xl mx-auto p-8 mt-20">
+      <h1 className="text-3xl font-bold mb-2">Help Center</h1>
+      <p className="mb-6 text-gray-600">Search for help articles or browse by category.</p>
+      <div className="relative mb-8">
+        <Input
+          type="text"
+          placeholder="Search articles, guides, or topics..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          onFocus={() => { if (searchResults.length > 0) setShowDropdown(true); }}
+          onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+          className="flex-1"
+        />
+        {showDropdown && searchResults.length > 0 && (
+          <div className="absolute left-0 right-0 mt-2 bg-white border rounded shadow z-10">
+            {searchResults.map(article => (
+              <Link
+                key={article.id}
+                href={`/article/${article.slug}`}
+                className="block px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                onMouseDown={(e: React.MouseEvent) => e.preventDefault()}
+              >
+                <div className="flex items-center gap-2">
+                  <span>{article.title}</span>
+                  {article.status === 'draft' && (
+                    <span className="ml-2 px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-semibold">Draft</span>
+                  )}
+                </div>
+                {article.content && (
+                  <div className="text-xs text-gray-500 mt-1 truncate">
+                    {article.content.replace(/<[^>]+>/g, '').slice(0, 100)}{article.content.replace(/<[^>]+>/g, '').length > 100 ? '…' : ''}
+                  </div>
+                )}
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+      <h2 className="text-xl font-semibold mb-4">Browse Categories</h2>
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="p-6 bg-white border rounded-lg shadow">
+              <Skeleton className="h-6 w-1/2 mb-2" />
+              <Skeleton className="h-4 w-2/3" />
+            </div>
+          ))}
+        </div>
+      ) : categories.length === 0 ? (
+        <div className="text-gray-500">No categories found.</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {categories.map(category => (
+            <Link
+              key={category.id}
+              href={`/category/${category.slug}`}
+              className="block p-6 bg-white border rounded-lg shadow hover:shadow-md transition"
+            >
+              <div className="font-bold text-lg mb-1">{category.name}</div>
+              <div className="text-gray-500 text-sm">{category.description || "No description"}</div>
+            </Link>
+          ))}
+        </div>
+      )}
     </main>
   );
 }
