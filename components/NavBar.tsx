@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { useAuth } from "../context/AuthContext";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback } from "./ui/avatar";
@@ -18,11 +19,11 @@ export function NavBar() {
   return (
     <nav className="flex items-center justify-between p-4 border-b">
       <div>
-        <a href="/" className="font-bold text-lg">Product School</a>
+        <Link href="/" className="font-bold text-lg">Product School</Link>
       </div>
       <div className="flex gap-4 items-center">
-        <a href="/">Help Center</a>
-        {isSuperAdmin && <a href="/admin">Admin Panel</a>}
+        <Link href="/">Help Center</Link>
+        {isSuperAdmin && <Link href="/admin">Admin Panel</Link>}
         {user ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -43,7 +44,7 @@ export function NavBar() {
           </DropdownMenu>
         ) : (
           <Button asChild variant="default">
-            <a href="/login">Login</a>
+            <Link href="/login">Login</Link>
           </Button>
         )}
       </div>
