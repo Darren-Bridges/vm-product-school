@@ -168,7 +168,7 @@
         </svg>
       </button>
       <div class="help-widget__brand-header">
-        <img src="/VMlogo.62080a51e68bffbddd39660df08de35e.svg" alt="VM Logo" class="help-widget__logo" width="32" height="32" />
+        <img src="https://vm-product-school.vercel.app/VMlogo.62080a51e68bffbddd39660df08de35e.svg" alt="VM Logo" class="help-widget__logo" width="32" height="32" />
         <div class="help-widget__brand-titles">
           <span class="help-widget__brand-title">Product School</span>
           <span class="help-widget__brand-subtitle">Help Centre</span>
