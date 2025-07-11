@@ -9,6 +9,7 @@ import Highlight from "@tiptap/extension-highlight";
 import Code from "@tiptap/extension-code";
 import CodeBlock from "@tiptap/extension-code-block";
 import Blockquote from "@tiptap/extension-blockquote";
+import { Iframe } from '../utils/tiptapExtensions';
 
 interface ArticleContentViewerProps {
   content: string;
@@ -25,6 +26,7 @@ export function ArticleContentViewer({ content }: ArticleContentViewerProps) {
       Code,
       CodeBlock,
       Blockquote,
+      Iframe,
     ],
     content: content,
     editable: false, // Make it read-only

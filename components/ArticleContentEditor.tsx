@@ -9,6 +9,7 @@ import Underline from "@tiptap/extension-underline";
 import Highlight from "@tiptap/extension-highlight";
 import Code from "@tiptap/extension-code";
 import Blockquote from "@tiptap/extension-blockquote";
+import { Iframe } from '../utils/tiptapExtensions';
 // Remove Youtube, Video, Iframe imports and extensions
 
 
@@ -34,9 +35,8 @@ export function ArticleContentEditor({ value, onChange }: ArticleContentEditorPr
   const [linkText, setLinkText] = useState("");
   const [editingLink, setEditingLink] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Remove Loom dialog state
-  // const [loomDialogOpen, setLoomDialogOpen] = useState(false);
-  // const [loomUrl, setLoomUrl] = useState("");
+  const [loomDialogOpen, setLoomDialogOpen] = useState(false);
+  const [loomUrl, setLoomUrl] = useState("");
 
   const editor = useEditor({
     extensions: [
@@ -47,6 +47,7 @@ export function ArticleContentEditor({ value, onChange }: ArticleContentEditorPr
       Highlight,
       Code,
       Blockquote,
+      Iframe,
       // Remove Youtube, Video, Iframe extensions
     ],
     content: value || "",
@@ -123,6 +124,18 @@ export function ArticleContentEditor({ value, onChange }: ArticleContentEditorPr
       setLinkText("");
     }
   }, [linkDialogOpen, editingLink, editor]);
+
+  const handleLoomEmbed = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loomUrl && editor) {
+      editor.chain().focus().insertContent({
+        type: 'iframe',
+        attrs: { src: loomUrl, width: 640, height: 360, frameborder: 0, allowfullscreen: true },
+      }).run();
+      setLoomDialogOpen(false);
+      setLoomUrl("");
+    }
+  };
 
   return (
     <div>
@@ -201,7 +214,35 @@ export function ArticleContentEditor({ value, onChange }: ArticleContentEditorPr
         </DialogContent>
       </Dialog>
       
-      {/* Remove Loom Embed Dialog */}
+      {/* Loom Embed Dialog */}
+      <Dialog open={loomDialogOpen} onOpenChange={open => {
+        setLoomDialogOpen(open);
+        if (!open) setLoomUrl("");
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Embed Loom Video</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleLoomEmbed}>
+            <label className="block text-sm font-medium mb-1" htmlFor="loom-url">Loom Video URL</label>
+            <input
+              id="loom-url"
+              type="url"
+              placeholder="https://www.loom.com/share/..."
+              value={loomUrl}
+              onChange={e => setLoomUrl(e.target.value)}
+              className="w-full px-3 py-2 border rounded mb-4"
+              required
+            />
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline">Cancel</Button>
+              </DialogClose>
+              <Button type="submit" disabled={!loomUrl}>Embed</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <div className="border rounded min-h-[120px] bg-white dark:bg-card">
         {/* Toolbar at the top */}
@@ -330,7 +371,16 @@ export function ArticleContentEditor({ value, onChange }: ArticleContentEditorPr
             style={{ display: "none" }}
             onChange={handleImageUpload}
           />
-          {/* Remove Loom button */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setLoomDialogOpen(true)}
+            disabled={!editor}
+            aria-label="Embed Loom Video"
+          >
+            🎥 Loom
+          </Button>
         </div>
         
         {/* Editor content */}
