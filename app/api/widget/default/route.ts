@@ -24,6 +24,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const { searchParams } = new URL(request.url);
+    const role = searchParams.get('role');
+    let allowedAccess;
+    if (role === 'superadmin') {
+      allowedAccess = ['public', 'external_clients', 'vm_internal'];
+    } else if (role) {
+      allowedAccess = ['public', 'external_clients'];
+    } else {
+      allowedAccess = ['public'];
+    }
+
     // Get recent published articles
     const { data: articles, error } = await supabase
       .from('articles')
@@ -33,12 +44,14 @@ export async function GET(request: NextRequest) {
         slug,
         content,
         created_at,
+        access_level,
         categories (
           id,
           name
         )
       `)
       .eq('status', 'published')
+      .in('access_level', allowedAccess)
       .order('created_at', { ascending: false })
       .limit(8);
 
@@ -64,6 +77,7 @@ export async function GET(request: NextRequest) {
         url: `/articles/${article.slug}`,
         categories: article.categories?.map((cat: Category) => cat.name) || [],
         created_at: article.created_at,
+        access_level: article.access_level,
       };
     });
 

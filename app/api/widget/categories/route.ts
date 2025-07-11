@@ -43,6 +43,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid API key' }, { status: 401 });
   }
 
+  // Get role from query param
+  const { searchParams } = new URL(request.url);
+  const role = searchParams.get('role');
+  let allowedAccess;
+  if (role === 'superadmin') {
+    allowedAccess = ['public', 'external_clients', 'vm_internal'];
+  } else if (role) {
+    allowedAccess = ['public', 'external_clients'];
+  } else {
+    allowedAccess = ['public'];
+  }
+
   // Fetch all top-level categories (parent_id is null)
   const { data: categories, error: catError } = await supabase
     .from('categories')
@@ -66,8 +78,9 @@ export async function GET(request: NextRequest) {
       const articleIds = articleIdsData.map((item: { article_id: string }) => item.article_id);
       const { data: articlesData } = await supabase
         .from('articles')
-        .select('id, title, slug, status')
+        .select('id, title, slug, status, access_level')
         .in('id', articleIds)
+        .in('access_level', allowedAccess)
         .eq('status', 'published');
       if (articlesData) articles = articlesData as Article[];
     }
@@ -89,8 +102,9 @@ export async function GET(request: NextRequest) {
           const subArticleIds = subArticleIdsData.map((item: { article_id: string }) => item.article_id);
           const { data: subArticlesData } = await supabase
             .from('articles')
-            .select('id, title, slug, status')
+            .select('id, title, slug, status, access_level')
             .in('id', subArticleIds)
+            .in('access_level', allowedAccess)
             .eq('status', 'published');
           if (subArticlesData) subArticles = subArticlesData as Article[];
         }

@@ -18,6 +18,7 @@ interface Article {
   content: string;
   created_at: string;
   updated_at: string;
+  access_level: string;
   categories?: Category[];
 }
 
@@ -26,7 +27,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid API key' }, { status: 401 });
   }
 
-  // Fetch all published articles with categories
+  // Get role from query param
+  const { searchParams } = new URL(request.url);
+  const role = searchParams.get('role');
+  let allowedAccess;
+  if (role === 'superadmin') {
+    allowedAccess = ['public', 'external_clients', 'vm_internal'];
+  } else if (role) {
+    allowedAccess = ['public', 'external_clients'];
+  } else {
+    allowedAccess = ['public'];
+  }
+
+  // Fetch all published articles with categories and access filter
   const { data: articles, error } = await supabase
     .from('articles')
     .select(`
@@ -36,10 +49,12 @@ export async function GET(request: NextRequest) {
       content,
       created_at,
       updated_at,
+      access_level,
       categories (
         name
       )
     `)
+    .in('access_level', allowedAccess)
     .eq('status', 'published')
     .order('created_at', { ascending: false });
 
@@ -56,6 +71,7 @@ export async function GET(request: NextRequest) {
     categories: article.categories?.map((cat) => cat.name) || [],
     created_at: article.created_at,
     updated_at: article.updated_at,
+    access_level: article.access_level,
   }));
 
   return NextResponse.json({ articles: processed });

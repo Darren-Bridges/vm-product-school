@@ -285,7 +285,7 @@
     const now = Date.now();
     if (!allArticlesLoaded || (now - allArticlesFetchedAt > ALL_ARTICLES_CACHE_EXPIRY)) {
       showLoading();
-      fetch(`${config.apiBaseUrl}/all-articles`, {
+      fetch(withRoleParam(`${config.apiBaseUrl}/all-articles`), {
         headers: { 'X-API-Key': config.apiKey },
       })
         .then(res => res.json())
@@ -334,7 +334,7 @@
     state.isLoading = true;
     showLoading();
     
-    fetch(`${config.apiBaseUrl}/contextual`, {
+    fetch(withRoleParam(`${config.apiBaseUrl}/contextual`), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -367,7 +367,7 @@
   function loadDefaultContent() {
     showLoading();
     
-    fetch(`${config.apiBaseUrl}/default`, {
+    fetch(withRoleParam(`${config.apiBaseUrl}/default`), {
       headers: {
         'X-API-Key': config.apiKey,
       },
@@ -396,12 +396,8 @@
       renderContent({ articles: allArticles });
       return;
     }
-    // Local search
-    const filtered = allArticles.filter(article =>
-      article.title.toLowerCase().includes(query) ||
-      (article.content && article.content.toLowerCase().includes(query))
-    );
-    renderContent({ articles: filtered });
+    // Remote search
+    searchContent(query);
   }
 
   /**
@@ -411,7 +407,7 @@
   function searchContent(query) {
     showLoading();
     
-    fetch(`${config.apiBaseUrl}/search?q=${encodeURIComponent(query)}`, {
+    fetch(withRoleParam(`${config.apiBaseUrl}/search?q=${encodeURIComponent(query)}`), {
       headers: {
         'X-API-Key': config.apiKey,
       },
@@ -1280,7 +1276,7 @@
   // Keeping it here for now, but it will not be called by the new code.
   function showAllArticlesView() {
     showLoading();
-    fetch(`${config.apiBaseUrl}/categories`, {
+    fetch(withRoleParam(`${config.apiBaseUrl}/categories`), {
       headers: { 'X-API-Key': config.apiKey },
     })
       .then(res => res.json())
@@ -1332,6 +1328,14 @@
         loadArticleContent(articleId);
       });
     });
+  }
+
+  // Helper to append userRole as a query param
+  function withRoleParam(url) {
+    if (config.userRole) {
+      return url + (url.includes('?') ? '&' : '?') + 'role=' + encodeURIComponent(config.userRole);
+    }
+    return url;
   }
 
   // Public API

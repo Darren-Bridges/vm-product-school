@@ -26,6 +26,15 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q');
+    const role = searchParams.get('role');
+    let allowedAccess;
+    if (role === 'superadmin') {
+      allowedAccess = ['public', 'external_clients', 'vm_internal'];
+    } else if (role) {
+      allowedAccess = ['public', 'external_clients'];
+    } else {
+      allowedAccess = ['public'];
+    }
 
     if (!query || query.trim().length < 2) {
       return NextResponse.json(
@@ -34,7 +43,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Search articles by title and content
+    // Search articles by title and content, filter by access_level
     const { data: articles, error } = await supabase
       .from('articles')
       .select(`
@@ -43,6 +52,7 @@ export async function GET(request: NextRequest) {
         slug,
         content,
         created_at,
+        access_level,
         categories (
           id,
           name
@@ -50,6 +60,7 @@ export async function GET(request: NextRequest) {
       `)
       .eq('status', 'published')
       .or(`title.ilike.%${query}%,content.ilike.%${query}%`)
+      .in('access_level', allowedAccess)
       .order('created_at', { ascending: false })
       .limit(10);
 
@@ -75,6 +86,7 @@ export async function GET(request: NextRequest) {
         url: `/articles/${article.slug}`,
         categories: article.categories?.map((cat: Category) => cat.name) || [],
         created_at: article.created_at,
+        access_level: article.access_level,
       };
     });
 
