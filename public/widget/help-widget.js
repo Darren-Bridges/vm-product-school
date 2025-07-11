@@ -301,10 +301,8 @@
           });
         return;
       }
-      // Load content if not already loaded
-      if (!elements.content.children.length || elements.content.querySelector('.help-widget__loading')) {
-        maybeShowDefaultArticleOrList();
-      }
+      // Always check for a path match, even if articles are already loaded
+      maybeShowDefaultArticleOrList();
     }
     function maybeShowDefaultArticleOrList() {
       if (config.path && allArticles && allArticles.length > 0) {
@@ -642,6 +640,17 @@
    */
   function updateContext(context) {
     loadContextualContent(context);
+  }
+
+  /**
+   * Update path (called by the application when page changes)
+   * @param {string} newPath - New page path
+   */
+  function updatePath(newPath) {
+    config.path = newPath;
+    if (state.isOpen && allArticles && allArticles.length > 0) {
+      maybeShowDefaultArticleOrList();
+    }
   }
 
   /**
@@ -1358,6 +1367,7 @@
   window.HelpWidget = {
     init,
     updateContext,
+    updatePath,
   };
 
   // Debug: Log that the script has loaded
