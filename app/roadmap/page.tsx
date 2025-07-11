@@ -33,12 +33,22 @@ interface SupabaseRoadmapItem {
   updated_at: string;
 }
 
+// In-memory cache for roadmap items
+let roadmapCache: { items: RoadmapItem[]; timestamp: number } | null = null;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in ms
+
 export default function RoadmapPage() {
   const [roadmapItems, setRoadmapItems] = useState<RoadmapItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchRoadmapItems = async () => {
+      // Use cache if available and not expired
+      if (roadmapCache && Date.now() - roadmapCache.timestamp < CACHE_DURATION) {
+        setRoadmapItems(roadmapCache.items);
+        setLoading(false);
+        return;
+      }
       try {
         const { data, error } = await supabase
           .from("roadmap_items")
@@ -52,6 +62,7 @@ export default function RoadmapPage() {
           article_slug: item.articles?.slug || undefined,
         }));
         setRoadmapItems(items);
+        roadmapCache = { items, timestamp: Date.now() };
       } catch (error) {
         console.error("Error fetching roadmap items:", error);
       } finally {
