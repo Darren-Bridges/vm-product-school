@@ -220,6 +220,57 @@ export default function CategoriesPage() {
       .replace(/(^-|-$)+/g, '');
   }
 
+  // Helper function to flatten categories for dropdown with proper indentation
+  const flattenCategoriesForDropdown = (categories: Category[], level: number = 0): Array<{ id: string; name: string; level: number }> => {
+    let result: Array<{ id: string; name: string; level: number }> = [];
+    
+    categories.forEach(category => {
+      // Add current category with indentation
+      result.push({
+        id: category.id,
+        name: '  '.repeat(level) + category.name,
+        level
+      });
+      
+      // Add children recursively
+      if (category.children && category.children.length > 0) {
+        result = result.concat(flattenCategoriesForDropdown(category.children, level + 1));
+      }
+    });
+    
+    return result;
+  };
+
+  // Helper function to check if a category would create a circular reference
+  const wouldCreateCircularReference = (categoryId: string, potentialParentId: string): boolean => {
+    if (categoryId === potentialParentId) return true;
+    
+    const findCategory = (cats: Category[], id: string): Category | null => {
+      for (const cat of cats) {
+        if (cat.id === id) return cat;
+        if (cat.children) {
+          const found = findCategory(cat.children, id);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    
+    const category = findCategory(categories, categoryId);
+    if (!category || !category.children) return false;
+    
+    // Check if potentialParentId is a descendant of categoryId
+    const isDescendant = (cats: Category[], targetId: string): boolean => {
+      for (const cat of cats) {
+        if (cat.id === targetId) return true;
+        if (cat.children && isDescendant(cat.children, targetId)) return true;
+      }
+      return false;
+    };
+    
+    return isDescendant(category.children, potentialParentId);
+  };
+
   // CREATE/EDIT CATEGORY
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -709,11 +760,11 @@ export default function CategoriesPage() {
                     className="w-full px-3 py-2 border rounded"
                   >
                     <option value="">No parent</option>
-                    {categories
-                      .filter(cat => cat.id !== editingCategory?.id)
-                      .map(category => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
+                    {flattenCategoriesForDropdown(categories)
+                      .filter(cat => cat.id !== editingCategory?.id && !wouldCreateCircularReference(editingCategory?.id || '', cat.id))
+                      .map(cat => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
                         </option>
                       ))}
                   </select>

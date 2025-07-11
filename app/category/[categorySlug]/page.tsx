@@ -5,6 +5,8 @@ import { supabase } from "../../../lib/supabaseClient";
 import Link from "next/link";
 import { Skeleton } from "../../../components/ui/skeleton";
 import { dataCache } from '../../../utils/dataCache';
+import { CategorySidebar, CategorySidebarMobile } from "@/components/CategorySidebar";
+import { FileText } from "lucide-react";
 
 interface Category {
   id: string;
@@ -28,17 +30,19 @@ interface ArticleCategory {
   category_id: string;
 }
 
-interface SubcategoryWithArticles extends Category {
+interface CategoryTreeNode extends Category {
   articles: Article[];
+  children: CategoryTreeNode[];
 }
 
 export default function CategoryPage() {
   const { categorySlug } = useParams<{ categorySlug: string }>();
   const [category, setCategory] = useState<Category | null>(null);
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [subcategories, setSubcategories] = useState<SubcategoryWithArticles[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [categoryTree, setCategoryTree] = useState<CategoryTreeNode | null>(null);
+  const [expanded, setExpanded] = useState<{ [id: string]: boolean }>({});
+  const [allCategoryTrees, setAllCategoryTrees] = useState<CategoryTreeNode[]>([]);
 
   useEffect(() => {
     const fetchCategory = async () => {
@@ -89,25 +93,23 @@ export default function CategoryPage() {
       }
       setCategory(categoryData);
 
-      // Find articles in this category
-      const articleIds = articleCategories
-        ? articleCategories.filter((ac: ArticleCategory) => ac.category_id === categoryData.id).map((ac: ArticleCategory) => ac.article_id)
-        : [];
-      setArticles(Array.isArray(articles) ? articles.filter((article: Article) => articleIds.includes(article.id)) : []);
-
-      // Fetch subcategories if this is a parent category
-      const subcategoriesData = categories.filter((c: Category) => c.parent_id === categoryData.id);
-      const subcategoriesWithArticles = subcategoriesData.map((subcategory: Category): SubcategoryWithArticles => {
-        const subArticleIds = articleCategories
-          ? articleCategories.filter((ac: ArticleCategory) => ac.category_id === subcategory.id).map((ac: ArticleCategory) => ac.article_id)
+      // Helper to build the full tree recursively
+      function buildTree(cat: Category): CategoryTreeNode {
+        const articleIds = articleCategories
+          ? articleCategories.filter((ac: ArticleCategory) => ac.category_id === cat.id).map((ac: ArticleCategory) => ac.article_id)
           : [];
-            return {
-              ...subcategory,
-          articles: Array.isArray(articles) ? articles.filter((article: Article) => subArticleIds.includes(article.id)) : [],
-            };
-      });
-        setSubcategories(subcategoriesWithArticles);
-
+        const nodeArticles = Array.isArray(articles) ? articles.filter((article: Article) => articleIds.includes(article.id)) : [];
+        const children = (Array.isArray(categories) ? categories : []).filter((c: Category) => c.parent_id === cat.id);
+        return {
+          ...cat,
+          articles: nodeArticles,
+          children: children.map(buildTree),
+        };
+      }
+      setCategoryTree(buildTree(categoryData));
+      // Build all root category trees for the sidebar
+      const rootCategories = (Array.isArray(categories) ? categories : []).filter((c: Category) => !c.parent_id);
+      setAllCategoryTrees(rootCategories.map(buildTree));
       setLoading(false);
     };
     if (categorySlug) fetchCategory();
@@ -137,83 +139,107 @@ export default function CategoryPage() {
       );
     }
 
-  return (
-    <div className="max-w-5xl mx-auto mt-20 p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">{category.name}</h1>
-        {category.description && (
-          <p className="text-muted-foreground text-lg">{category.description}</p>
+  function renderCategoryTree(node: CategoryTreeNode, parentSlug: string, level: number = 0) {
+    return (
+      <section key={node.id} className={level === 0 ? "mb-6" : "mb-14 mt-12"}>
+        {level !== 0 && (
+          <>
+            <h2 className="text-2xl font-bold mb-6">{node.name}</h2>
+            {node.description && <p className="text-muted-foreground mb-6 text-lg">{node.description}</p>}
+          </>
         )}
-      </div>
-
-      {/* Direct articles in this category */}
-      {articles.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Articles</h2>
-          <div className="space-y-3">
-            {articles.map(article => (
-              <Link
-                key={article.id}
-                href={`/category/${category.slug}/${article.slug}`}
-                className="block p-4 bg-card border rounded-lg hover:shadow-md transition"
-              >
-                <h3 className="font-semibold text-lg mb-1">{article.title}</h3>
-                {article.content && (
-                  <p className="text-muted-foreground text-sm line-clamp-2">
-                    {article.content.replace(/<[^>]+>/g, '').slice(0, 150)}
-                    {article.content.replace(/<[^>]+>/g, '').length > 150 ? '…' : ''}
-                  </p>
-                )}
-              </Link>
+        {node.articles.length > 0 && (
+          <ul className="mb-2">
+            {node.articles.map(article => (
+              <li key={article.id} className="flex items-center border-b border-border last:border-b-0 py-3 gap-2">
+                <FileText className="w-5 h-5 text-muted-foreground shrink-0" />
+                <Link
+                  href={`/category/${parentSlug}/${article.slug}`}
+                  className="block text-base text-foreground font-medium hover:underline truncate"
+                >
+                  {article.title}
+                </Link>
+              </li>
             ))}
+          </ul>
+        )}
+        {node.children.length > 0 && (
+          <div className="space-y-14">
+            {node.children.map(child => renderCategoryTree(child, child.slug, level + 1))}
           </div>
-        </div>
-      )}
+        )}
+      </section>
+    );
+  }
 
-      {/* Subcategories */}
-      {subcategories.length > 0 && (
-        <div className="space-y-8">
-          {subcategories.map(subcategory => (
-            <div key={subcategory.id}>
-              <h2 className="text-xl font-semibold mb-4">{subcategory.name}</h2>
-              {subcategory.description && (
-                <p className="text-muted-foreground mb-4">{subcategory.description}</p>
-              )}
-              {subcategory.articles.length > 0 ? (
-                <div className="space-y-3">
-                  {subcategory.articles.map(article => (
-                    <Link
-                      key={article.id}
-                      href={`/category/${category.slug}/${article.slug}`}
-                      className="block p-4 bg-card border rounded-lg hover:shadow-md transition"
-                    >
-                      <h3 className="font-semibold text-lg mb-1">{article.title}</h3>
-                      {article.content && (
-                        <p className="text-muted-foreground text-sm line-clamp-2">
-                          {article.content.replace(/<[^>]+>/g, '').slice(0, 150)}
-                          {article.content.replace(/<[^>]+>/g, '').length > 150 ? '…' : ''}
-                        </p>
-                      )}
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground italic">No articles in this subcategory yet.</p>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+  function toggleExpand(id: string) {
+    setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+  }
 
-      {/* No content message */}
-      {articles.length === 0 && subcategories.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground text-lg">No articles found in this category.</p>
-          <Link href="/" className="text-blue-600 hover:underline mt-4 inline-block">
-            Back to Help Centre
+  function SidebarTree({ node, parentSlug, level = 0 }: { node: CategoryTreeNode; parentSlug: string; level?: number }) {
+    const isExpanded = expanded[node.id] ?? level < 2; // expand top 2 levels by default
+    return (
+      <div key={node.id} style={{ marginLeft: level * 12 }}>
+        <div className="flex items-center gap-1">
+          {node.children.length > 0 ? (
+            <button
+              type="button"
+              className="text-xs px-1 focus:outline-none"
+              onClick={() => toggleExpand(node.id)}
+              aria-label={isExpanded ? 'Collapse' : 'Expand'}
+            >
+              {isExpanded ? '▼' : '▶'}
+            </button>
+          ) : (
+            <span className="inline-block w-4" />
+          )}
+          <Link
+            href={`/category/${node.slug}`}
+            className="font-medium hover:underline text-foreground"
+          >
+            {node.name}
           </Link>
         </div>
-      )}
+        {isExpanded && (
+          <div>
+            {node.articles.map(article => (
+              <div key={article.id} style={{ marginLeft: 16 }}>
+                <Link
+                  href={`/category/${node.slug}/${article.slug}`}
+                  className="text-sm hover:underline text-muted-foreground block truncate"
+                >
+                  {article.title}
+                </Link>
+              </div>
+            ))}
+            {node.children.map(child => (
+              <SidebarTree key={child.id} node={child} parentSlug={parentSlug} level={level + 1} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex w-full mt-20 gap-8 p-4 md:p-8">
+      <CategorySidebar
+        trees={allCategoryTrees}
+        currentCategorySlug={categorySlug}
+      />
+      <main className="flex-1">
+        <CategorySidebarMobile
+          trees={allCategoryTrees}
+          currentCategorySlug={categorySlug}
+        />
+        <div className="mb-6 pb-2">
+          <h1 className="text-4xl font-bold mb-4">{category.name}</h1>
+          {category.description && (
+            <p className="text-lg text-muted-foreground mb-3">{category.description}</p>
+          )}
+        </div>
+        {categoryTree && renderCategoryTree(categoryTree, categoryTree.slug, 0)}
+      </main>
     </div>
   );
 } 

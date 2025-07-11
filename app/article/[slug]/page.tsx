@@ -8,6 +8,7 @@ import { ArticleContentViewer } from "../../../components/ArticleContentViewer";
 import { dataCache } from '../../../utils/dataCache';
 import { useAuth } from "../../../context/AuthContext";
 import { getArticleAccessFilter } from "../../../utils/accessControl";
+import { CategorySidebar, CategorySidebarMobile, CategoryTreeNode } from "@/components/CategorySidebar";
 
 interface Article {
   id: string;
@@ -23,6 +24,20 @@ interface RelatedArticle {
   slug: string;
 }
 
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  order?: number;
+  parent_id: string | null;
+}
+
+interface ArticleCategory {
+  article_id: string;
+  category_id: string;
+}
+
 export default function ArticlePage() {
   const { slug } = useParams<{ slug: string }>();
   const [article, setArticle] = useState<Article | null>(null);
@@ -30,12 +45,15 @@ export default function ArticlePage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const { user, isSuperAdmin } = useAuth();
+  const [allCategoryTrees, setAllCategoryTrees] = useState<CategoryTreeNode[]>([]);
 
   useEffect(() => {
     const fetchArticle = async () => {
       setLoading(true);
       setNotFound(false);
       let articles = dataCache.getArticles();
+      let categories = dataCache.getCategories();
+      let articleCategories = dataCache.getArticleCategories();
       const allowedAccess = getArticleAccessFilter(user, isSuperAdmin);
       if (!articles) {
         const { data, error } = await supabase
@@ -45,6 +63,25 @@ export default function ArticlePage() {
         if (!error && data) {
           articles = data;
           dataCache.setArticles(data);
+        }
+      }
+      if (!categories) {
+        const { data, error } = await supabase
+          .from("categories")
+          .select("id, name, slug, description, order, parent_id")
+          .order("order", { ascending: true });
+        if (!error && data) {
+          categories = data;
+          dataCache.setCategories(data);
+        }
+      }
+      if (!articleCategories) {
+        const { data, error } = await supabase
+          .from("article_categories")
+          .select("article_id, category_id");
+        if (!error && data) {
+          articleCategories = data;
+          dataCache.setArticleCategories(data);
         }
       }
       if (!articles) {
@@ -68,6 +105,24 @@ export default function ArticlePage() {
           slug: article.slug,
         }));
       setOtherArticles(otherArticles);
+
+      // Build all root category trees for the sidebar
+      if (categories && articleCategories) {
+        function buildTree(cat: Category): CategoryTreeNode {
+          const articleIds = articleCategories
+            ? articleCategories.filter((ac: ArticleCategory) => ac.category_id === cat.id).map((ac: ArticleCategory) => ac.article_id)
+            : [];
+          const nodeArticles = Array.isArray(articles) ? articles.filter((article: Article) => articleIds.includes(article.id)) : [];
+          const children = (Array.isArray(categories) ? categories : []).filter((c: Category) => c.parent_id === cat.id);
+          return {
+            ...cat,
+            articles: nodeArticles,
+            children: children.map(buildTree),
+          };
+        }
+        const rootCategories = (Array.isArray(categories) ? categories : []).filter((c: Category) => !c.parent_id);
+        setAllCategoryTrees(rootCategories.map(buildTree));
+      }
       setLoading(false);
     };
     if (slug) fetchArticle();
@@ -104,22 +159,15 @@ export default function ArticlePage() {
 
   return (
     <div className="flex w-full mt-20 gap-8 p-4 md:p-8">
-      {/* Desktop sidebar */}
-      <aside className="w-64 hidden md:block border-r pr-6">
-        <h2 className="text-lg font-semibold mb-4">Other Articles</h2>
-        <nav className="space-y-2">
-          {otherArticles.map(a => (
-            <Link
-              key={a.id}
-              href={`/article/${a.slug}`}
-              className="block text-foreground hover:text-blue-600 hover:underline truncate"
-            >
-              {a.title}
-            </Link>
-          ))}
-        </nav>
-      </aside>
+      <CategorySidebar
+        trees={allCategoryTrees}
+        currentArticleSlug={slug}
+      />
       <main className="flex-1 px-8 md:px-16">
+        <CategorySidebarMobile
+          trees={allCategoryTrees}
+          currentArticleSlug={slug}
+        />
         <h1 className="text-3xl font-bold mb-6">{article.title}</h1>
         <div className="w-full">
           <ArticleContentViewer content={article.content} />
