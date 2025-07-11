@@ -19,6 +19,7 @@ interface Article {
   created_at: string;
   updated_at: string;
   access_level: string;
+  path?: string;
   categories?: Category[];
 }
 
@@ -50,6 +51,7 @@ export async function GET(request: NextRequest) {
       created_at,
       updated_at,
       access_level,
+      path,
       categories (
         name
       )
@@ -72,6 +74,7 @@ export async function GET(request: NextRequest) {
     created_at: article.created_at,
     updated_at: article.updated_at,
     access_level: article.access_level,
+    path: article.path,
   }));
 
   return NextResponse.json({ articles: processed });

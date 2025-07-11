@@ -13,6 +13,7 @@ interface Article {
   title: string;
   slug: string;
   status: string;
+  path?: string;
 }
 
 interface Subcategory {
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
       const articleIds = articleIdsData.map((item: { article_id: string }) => item.article_id);
       const { data: articlesData } = await supabase
         .from('articles')
-        .select('id, title, slug, status, access_level')
+        .select('id, title, slug, status, access_level, path')
         .in('id', articleIds)
         .in('access_level', allowedAccess)
         .eq('status', 'published');
@@ -102,7 +103,7 @@ export async function GET(request: NextRequest) {
           const subArticleIds = subArticleIdsData.map((item: { article_id: string }) => item.article_id);
           const { data: subArticlesData } = await supabase
             .from('articles')
-            .select('id, title, slug, status, access_level')
+            .select('id, title, slug, status, access_level, path')
             .in('id', subArticleIds)
             .in('access_level', allowedAccess)
             .eq('status', 'published');

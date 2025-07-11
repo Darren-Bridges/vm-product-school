@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
         content,
         created_at,
         access_level,
+        path,
         categories (
           id,
           name
@@ -78,6 +79,7 @@ export async function GET(request: NextRequest) {
         categories: article.categories?.map((cat: Category) => cat.name) || [],
         created_at: article.created_at,
         access_level: article.access_level,
+        path: article.path,
       };
     });
 
