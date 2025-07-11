@@ -42,6 +42,10 @@ export function ArticleContentEditor({ value, onChange }: ArticleContentEditorPr
   const [articles, setArticles] = useState<{ id: string; title: string; slug: string }[]>([]);
   const [filteredArticles, setFilteredArticles] = useState<typeof articles>([]);
   const [selectedArticle, setSelectedArticle] = useState<{ id: string; title: string; slug: string } | null>(null);
+  const [iframeDialogOpen, setIframeDialogOpen] = useState(false);
+  const [iframeUrl, setIframeUrl] = useState("");
+  const [iframeWidth, setIframeWidth] = useState("100%");
+  const [iframeHeight, setIframeHeight] = useState("800");
 
 
   const editor = useEditor({
@@ -167,6 +171,8 @@ export function ArticleContentEditor({ value, onChange }: ArticleContentEditorPr
     }
   };
 
+
+
   return (
     <div className="article-editor-responsive">
       {/* Link Dialog outside the main form */}
@@ -257,26 +263,45 @@ export function ArticleContentEditor({ value, onChange }: ArticleContentEditorPr
           <DialogHeader>
             <DialogTitle>Embed Loom Video</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleLoomEmbed}>
-            <label className="block text-sm font-medium mb-1" htmlFor="loom-url">Loom Video URL</label>
-            <input
-              id="loom-url"
-              type="url"
-              placeholder="https://www.loom.com/share/..."
-              value={loomUrl}
-              onChange={e => setLoomUrl(e.target.value)}
-              className="w-full px-3 py-2 border rounded mb-4 text-base"
-              required
-              inputMode="text"
-              style={{ fontSize: '16px' }}
-            />
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button" variant="outline">Cancel</Button>
-              </DialogClose>
-              <Button type="submit" disabled={!loomUrl}>Embed</Button>
-            </DialogFooter>
-          </form>
+          <label className="block text-sm font-medium mb-1" htmlFor="loom-url">Loom Video URL</label>
+          <input
+            id="loom-url"
+            type="url"
+            placeholder="https://www.loom.com/share/..."
+            value={loomUrl}
+            onChange={e => setLoomUrl(e.target.value)}
+            className="w-full px-3 py-2 border rounded mb-4 text-base"
+            required
+            inputMode="text"
+            style={{ fontSize: '16px' }}
+          />
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button
+              type="button"
+              disabled={!loomUrl}
+              onClick={() => {
+                if (loomUrl && editor) {
+                  // Convert Loom share URL to embed URL if needed
+                  let embedUrl = loomUrl;
+                  const shareMatch = loomUrl.match(/https:\/\/www\.loom\.com\/share\/([a-zA-Z0-9]+)/);
+                  if (shareMatch) {
+                    embedUrl = `https://www.loom.com/embed/${shareMatch[1]}`;
+                  }
+                  editor.chain().focus().insertContent({
+                    type: 'iframe',
+                    attrs: { src: embedUrl, width: 640, height: 360, frameborder: 0, allowfullscreen: true },
+                  }).run();
+                  setLoomDialogOpen(false);
+                  setLoomUrl("");
+                }
+              }}
+            >
+              Embed
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -329,6 +354,89 @@ export function ArticleContentEditor({ value, onChange }: ArticleContentEditorPr
               }}
             >
               Insert Link
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Iframe Embed Dialog */}
+      <Dialog open={iframeDialogOpen} onOpenChange={open => {
+        setIframeDialogOpen(open);
+        if (!open) {
+          setIframeUrl("");
+          setIframeWidth("100%");
+          setIframeHeight("800");
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Embed Iframe</DialogTitle>
+          </DialogHeader>
+          <label className="block text-sm font-medium mb-1" htmlFor="iframe-url">Iframe URL</label>
+          <input
+            id="iframe-url"
+            type="url"
+            placeholder="https://scribehow.com/embed/..."
+            value={iframeUrl}
+            onChange={e => setIframeUrl(e.target.value)}
+            className="w-full px-3 py-2 border rounded mb-2 text-base"
+            required
+            inputMode="text"
+            style={{ fontSize: '16px' }}
+          />
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <div>
+              <label className="block text-sm font-medium mb-1" htmlFor="iframe-width">Width</label>
+              <input
+                id="iframe-width"
+                type="text"
+                placeholder="100%"
+                value={iframeWidth}
+                onChange={e => setIframeWidth(e.target.value)}
+                className="w-full px-3 py-2 border rounded text-base"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1" htmlFor="iframe-height">Height</label>
+              <input
+                id="iframe-height"
+                type="text"
+                placeholder="800"
+                value={iframeHeight}
+                onChange={e => setIframeHeight(e.target.value)}
+                className="w-full px-3 py-2 border rounded text-base"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button 
+              type="button" 
+              disabled={!iframeUrl}
+              onClick={() => {
+                if (iframeUrl && editor) {
+                  editor.chain().focus().insertContent({
+                    type: 'iframe',
+                    attrs: { 
+                      src: iframeUrl, 
+                      width: iframeWidth, 
+                      height: iframeHeight, 
+                      frameborder: 0, 
+                      allowfullscreen: true,
+                      allow: 'fullscreen',
+                      style: 'aspect-ratio: 1 / 1; border: 0; min-height: 480px'
+                    },
+                  }).run();
+                  setIframeDialogOpen(false);
+                  setIframeUrl("");
+                  setIframeWidth("100%");
+                  setIframeHeight("800");
+                }
+              }}
+            >
+              Embed
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -480,6 +588,16 @@ export function ArticleContentEditor({ value, onChange }: ArticleContentEditorPr
             aria-label="Link to Article"
           >
             📎 Article Link
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setIframeDialogOpen(true)}
+            disabled={!editor}
+            aria-label="Embed Iframe"
+          >
+            🖼️ Iframe
           </Button>
         </div>
         
