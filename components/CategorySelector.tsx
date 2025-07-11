@@ -107,7 +107,7 @@ export function CategorySelector({ selectedCategories, onChange, className = "" 
           </Button>
 
           {isOpen && (
-            <div className="absolute z-10 w-full mt-1 bg-background border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+            <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
               {categories.length === 0 ? (
                 <div className="p-3 text-sm text-muted-foreground">
                   No categories available. Create some categories first.

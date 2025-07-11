@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/AuthContext";
 import { Button } from "../../components/ui/button";
 
+interface ErrorWithMessage {
+  message: string;
+}
+
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,8 +26,11 @@ export default function LoginPage() {
       await login(email, password);
       router.push("/admin");
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Login failed";
-      setError(errorMessage);
+      if (err && typeof err === "object" && "message" in err && typeof (err as ErrorWithMessage).message === "string") {
+        setError((err as ErrorWithMessage).message);
+      } else {
+        setError("Login failed");
+      }
     } finally {
       setLoading(false);
     }
