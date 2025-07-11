@@ -165,9 +165,13 @@ a {
 }
 
 .article-editor-responsive {
-  max-width: 600px;
+  max-width: 100%;
   margin-left: auto;
   margin-right: auto;
+  width: 100%;
+}
+
+.article-editor-responsive .tiptap {
   width: 100%;
 }
 

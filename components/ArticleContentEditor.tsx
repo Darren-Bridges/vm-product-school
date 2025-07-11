@@ -37,6 +37,12 @@ export function ArticleContentEditor({ value, onChange }: ArticleContentEditorPr
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loomDialogOpen, setLoomDialogOpen] = useState(false);
   const [loomUrl, setLoomUrl] = useState("");
+  const [articleLinkDialogOpen, setArticleLinkDialogOpen] = useState(false);
+  const [articleSearch, setArticleSearch] = useState("");
+  const [articles, setArticles] = useState<{ id: string; title: string; slug: string }[]>([]);
+  const [filteredArticles, setFilteredArticles] = useState<typeof articles>([]);
+  const [selectedArticle, setSelectedArticle] = useState<{ id: string; title: string; slug: string } | null>(null);
+
 
   const editor = useEditor({
     extensions: [
@@ -62,6 +68,30 @@ export function ArticleContentEditor({ value, onChange }: ArticleContentEditorPr
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
+
+  useEffect(() => {
+    if (articleLinkDialogOpen && articles.length === 0) {
+      supabase
+        .from("articles")
+        .select("id, title, slug")
+        .then(({ data }) => {
+          if (data) setArticles(data);
+        });
+    }
+  }, [articleLinkDialogOpen, articles.length]);
+
+  useEffect(() => {
+    if (articleSearch.trim() === "") {
+      setFilteredArticles(articles);
+    } else {
+      setFilteredArticles(
+        articles.filter(a =>
+          a.title.toLowerCase().includes(articleSearch.toLowerCase()) ||
+          a.slug.toLowerCase().includes(articleSearch.toLowerCase())
+        )
+      );
+    }
+  }, [articleSearch, articles]);
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -250,6 +280,60 @@ export function ArticleContentEditor({ value, onChange }: ArticleContentEditorPr
         </DialogContent>
       </Dialog>
 
+      {/* Article Link Dialog */}
+      <Dialog open={articleLinkDialogOpen} onOpenChange={setArticleLinkDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Insert Link to Article</DialogTitle>
+          </DialogHeader>
+          <input
+            type="text"
+            placeholder="Search articles..."
+            value={articleSearch}
+            onChange={e => setArticleSearch(e.target.value)}
+            className="w-full px-3 py-2 border rounded mb-2 text-base"
+            autoFocus
+          />
+          <div className="max-h-48 overflow-y-auto border rounded mb-4">
+            {filteredArticles.length === 0 ? (
+              <div className="p-2 text-muted-foreground">No articles found.</div>
+            ) : (
+              filteredArticles.map(article => (
+                <div
+                  key={article.id}
+                  className={`p-2 cursor-pointer hover:bg-accent ${selectedArticle?.id === article.id ? 'bg-accent' : ''}`}
+                  onClick={() => setSelectedArticle(article)}
+                >
+                  <div className="font-medium">{article.title}</div>
+                  <div className="text-xs text-muted-foreground">/article/{article.slug}</div>
+                </div>
+              ))
+            )}
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button
+              type="button"
+              disabled={!selectedArticle}
+              onClick={() => {
+                if (selectedArticle && editor) {
+                  const url = `/article/${selectedArticle.slug}`;
+                  const text = selectedArticle.title;
+                  editor.chain().focus().insertContent(text).setTextSelection({ from: editor.state.selection.from, to: editor.state.selection.from + text.length }).setLink({ href: url }).run();
+                  setArticleLinkDialogOpen(false);
+                  setSelectedArticle(null);
+                  setArticleSearch("");
+                }
+              }}
+            >
+              Insert Link
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="border rounded min-h-[120px] bg-white dark:bg-card">
         {/* Toolbar at the top */}
         <div className="border-b p-2 flex gap-1 flex-wrap">
@@ -386,6 +470,16 @@ export function ArticleContentEditor({ value, onChange }: ArticleContentEditorPr
             aria-label="Embed Loom Video"
           >
             🎥 Loom
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setArticleLinkDialogOpen(true)}
+            disabled={!editor}
+            aria-label="Link to Article"
+          >
+            📎 Article Link
           </Button>
         </div>
         
