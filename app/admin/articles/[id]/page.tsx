@@ -270,37 +270,44 @@ export default function EditArticlePage() {
             <h1 className="text-3xl font-bold text-foreground">Edit Article</h1>
             <p className="text-muted-foreground mt-2">Update your help centre content</p>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="ghost" aria-label="More options">
-                <MoreHorizontal className="w-5 h-5" />
+          <div className="flex items-center gap-2">
+            {status === "draft" && (
+              <Button asChild variant="outline">
+                <Link href={`/admin/articles/${articleId}/preview`}>Preview</Link>
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem asChild>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <span className="text-destructive cursor-pointer">Delete Article</span>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete Article?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to delete this article? This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    {deleteError && <div className="text-red-600 text-sm mb-2">{deleteError}</div>}
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                        {deleting ? "Deleting..." : "Delete"}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="icon" variant="ghost" aria-label="More options">
+                  <MoreHorizontal className="w-5 h-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <span className="text-destructive cursor-pointer">Delete Article</span>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Article?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete this article? This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      {deleteError && <div className="text-red-600 text-sm mb-2">{deleteError}</div>}
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          {deleting ? "Deleting..." : "Delete"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
         
         {/* Link Dialog outside the main form */}
