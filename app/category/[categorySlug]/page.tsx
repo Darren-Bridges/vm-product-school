@@ -9,26 +9,26 @@ import { dataCache } from '../../../utils/dataCache';
 interface Category {
   id: string;
   name: string;
-  description?: string;
   slug: string;
-  order?: number;
-  parent_id?: string | null;
+  description: string;
+  order: number;
+  parent_id: string | null;
 }
 
 interface Article {
   id: string;
   title: string;
   slug: string;
+  content: string;
   status: string;
-  content?: string;
 }
 
-interface Subcategory {
-  id: string;
-  name: string;
-  description?: string;
-  slug: string;
-  order?: number;
+interface ArticleCategory {
+  article_id: string;
+  category_id: string;
+}
+
+interface SubcategoryWithArticles extends Category {
   articles: Article[];
 }
 
@@ -36,7 +36,7 @@ export default function CategoryPage() {
   const { categorySlug } = useParams<{ categorySlug: string }>();
   const [category, setCategory] = useState<Category | null>(null);
   const [articles, setArticles] = useState<Article[]>([]);
-  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+  const [subcategories, setSubcategories] = useState<SubcategoryWithArticles[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -81,7 +81,7 @@ export default function CategoryPage() {
         setLoading(false);
         return;
       }
-      const categoryData = categories.find((c: any) => c.slug === categorySlug);
+      const categoryData = categories.find((category: Category) => category.slug === categorySlug);
       if (!categoryData) {
         setNotFound(true);
         setLoading(false);
@@ -91,19 +91,19 @@ export default function CategoryPage() {
 
       // Find articles in this category
       const articleIds = articleCategories
-        ? articleCategories.filter((ac: any) => ac.category_id === categoryData.id).map((ac: any) => ac.article_id)
+        ? articleCategories.filter((ac: ArticleCategory) => ac.category_id === categoryData.id).map((ac: ArticleCategory) => ac.article_id)
         : [];
-      setArticles(Array.isArray(articles) ? articles.filter((a: any) => articleIds.includes(a.id)) : []);
+      setArticles(Array.isArray(articles) ? articles.filter((article: Article) => articleIds.includes(article.id)) : []);
 
       // Fetch subcategories if this is a parent category
-      const subcategoriesData = categories.filter((c: any) => c.parent_id === categoryData.id);
-      const subcategoriesWithArticles = subcategoriesData.map((subcategory: any) => {
+      const subcategoriesData = categories.filter((c: Category) => c.parent_id === categoryData.id);
+      const subcategoriesWithArticles = subcategoriesData.map((subcategory: Category): SubcategoryWithArticles => {
         const subArticleIds = articleCategories
-          ? articleCategories.filter((ac: any) => ac.category_id === subcategory.id).map((ac: any) => ac.article_id)
+          ? articleCategories.filter((ac: ArticleCategory) => ac.category_id === subcategory.id).map((ac: ArticleCategory) => ac.article_id)
           : [];
         return {
           ...subcategory,
-          articles: Array.isArray(articles) ? articles.filter((a: any) => subArticleIds.includes(a.id)) : [],
+          articles: Array.isArray(articles) ? articles.filter((article: Article) => subArticleIds.includes(article.id)) : [],
         };
       });
       setSubcategories(subcategoriesWithArticles);

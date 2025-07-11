@@ -11,7 +11,7 @@ interface Category {
   id: string;
   name: string;
   slug: string;
-  description?: string;
+  description: string;
 }
 
 interface Article {
@@ -22,7 +22,12 @@ interface Article {
   status: string;
 }
 
-interface SidebarArticle {
+interface ArticleCategory {
+  article_id: string;
+  category_id: string;
+}
+
+interface RelatedArticle {
   id: string;
   title: string;
   slug: string;
@@ -32,7 +37,7 @@ export default function CategoryArticlePage() {
   const { categorySlug, articleSlug } = useParams<{ categorySlug: string; articleSlug: string }>();
   const [category, setCategory] = useState<Category | null>(null);
   const [article, setArticle] = useState<Article | null>(null);
-  const [otherArticles, setOtherArticles] = useState<SidebarArticle[]>([]);
+  const [otherArticles, setOtherArticles] = useState<RelatedArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -77,14 +82,14 @@ export default function CategoryArticlePage() {
         setLoading(false);
         return;
       }
-      const categoryData = categories.find((c: any) => c.slug === categorySlug);
+      const categoryData = categories.find((category: Category) => category.slug === categorySlug);
       if (!categoryData) {
         setNotFound(true);
         setLoading(false);
         return;
       }
       setCategory(categoryData);
-      const articleData = articles.find((a: any) => a.slug === articleSlug && a.status === 'published');
+      const articleData = articles.find((article: Article) => article.slug === articleSlug);
       if (!articleData) {
         setNotFound(true);
         setLoading(false);
@@ -93,10 +98,18 @@ export default function CategoryArticlePage() {
       setArticle(articleData);
       // Find other articles in the same category (requires article-category mapping)
       const otherArticleIds = articleCategories
-        ? articleCategories.filter((ac: any) => ac.category_id === categoryData.id && ac.article_id !== articleData.id).map((ac: any) => ac.article_id)
+        ? articleCategories.filter((ac: ArticleCategory) => ac.category_id === categoryData.id && ac.article_id !== articleData.id).map((ac: ArticleCategory) => ac.article_id)
         : [];
-      setOtherArticles(Array.isArray(articles) ? articles.filter((a: any) => otherArticleIds.includes(a.id)) : []);
+      const relatedArticles = articles
+        .filter((article: Article) => otherArticleIds.includes(article.id))
+        .slice(0, 5)
+        .map((article: Article): RelatedArticle => ({
+          id: article.id,
+          title: article.title,
+          slug: article.slug,
+        }));
 
+      setOtherArticles(relatedArticles);
       setLoading(false);
     };
     if (categorySlug && articleSlug) fetchData();

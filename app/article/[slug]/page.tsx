@@ -15,7 +15,7 @@ interface Article {
   status: string;
 }
 
-interface SidebarArticle {
+interface RelatedArticle {
   id: string;
   title: string;
   slug: string;
@@ -24,7 +24,7 @@ interface SidebarArticle {
 export default function ArticlePage() {
   const { slug } = useParams<{ slug: string }>();
   const [article, setArticle] = useState<Article | null>(null);
-  const [otherArticles, setOtherArticles] = useState<SidebarArticle[]>([]);
+  const [otherArticles, setOtherArticles] = useState<RelatedArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -48,14 +48,22 @@ export default function ArticlePage() {
         setLoading(false);
         return;
       }
-      const article = articles.find((a: any) => a.slug === slug && a.status === 'published');
-      if (!article) {
+      const currentArticle = articles.find((article: Article) => article.slug === slug);
+      if (!currentArticle) {
         setNotFound(true);
         setLoading(false);
         return;
       }
-      setArticle(article);
-      setOtherArticles(articles.filter((a: any) => a.slug !== slug));
+      setArticle(currentArticle);
+      const otherArticles = articles
+        .filter((article: Article) => article.id !== currentArticle.id)
+        .slice(0, 5)
+        .map((article: Article): RelatedArticle => ({
+          id: article.id,
+          title: article.title,
+          slug: article.slug,
+        }));
+      setOtherArticles(otherArticles);
       setLoading(false);
     };
     if (slug) fetchArticle();
