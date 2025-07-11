@@ -50,8 +50,8 @@ export default function CategoryArticlePage() {
       let articleCategories = dataCache.getArticleCategories();
       if (!categories) {
         const { data, error } = await supabase
-          .from("categories")
-          .select("id, name, slug, description")
+        .from("categories")
+        .select("id, name, slug, description")
           .order("order", { ascending: true });
         if (!error && data) {
           categories = data;

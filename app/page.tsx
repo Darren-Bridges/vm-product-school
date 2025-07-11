@@ -39,11 +39,11 @@ export default function Home() {
       setLoading(true);
       let categories = dataCache.getCategories();
       if (!categories) {
-        const { data, error } = await supabase
-          .from("categories")
-          .select("id, name, description, order, parent_id, slug")
-          .is("parent_id", null)
-          .order("order", { ascending: true });
+      const { data, error } = await supabase
+        .from("categories")
+        .select("id, name, description, order, parent_id, slug")
+        .is("parent_id", null)
+        .order("order", { ascending: true });
         if (!error && data) {
           categories = data;
           dataCache.setCategories(data);
@@ -60,9 +60,9 @@ export default function Home() {
     const fetchArticles = async () => {
       let articles = dataCache.getArticles();
       if (!articles) {
-        const { data, error } = await supabase
-          .from("articles")
-          .select("id, title, slug, created_at, status, content")
+      const { data, error } = await supabase
+        .from("articles")
+        .select("id, title, slug, created_at, status, content")
           .eq("status", "published");
         if (!error && data) {
           articles = data;

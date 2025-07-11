@@ -211,8 +211,8 @@ function RoadmapItemCard({ item }: { item: RoadmapItem }) {
   return (
     <div className="border rounded-lg p-4 hover:bg-accent/50 transition-colors flex justify-between items-center">
       <div>
-        <h3 className="font-medium text-sm mb-2 line-clamp-2">{item.title}</h3>
-        <p className="text-xs text-muted-foreground mb-3 line-clamp-3">{item.description}</p>
+        <h3 className="font-semibold text-lg mb-2 line-clamp-2">{item.title}</h3>
+        <p className="text-sm text-muted-foreground mb-3 line-clamp-3 leading-relaxed">{item.description}</p>
       </div>
       <div className="flex gap-2 items-center">
         {item.article_slug && (

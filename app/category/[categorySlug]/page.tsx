@@ -49,8 +49,8 @@ export default function CategoryPage() {
       let articleCategories = dataCache.getArticleCategories();
       if (!categories) {
         const { data, error } = await supabase
-          .from("categories")
-          .select("id, name, description, slug, order, parent_id")
+        .from("categories")
+        .select("id, name, description, slug, order, parent_id")
           .order("order", { ascending: true });
         if (!error && data) {
           categories = data;
@@ -101,12 +101,12 @@ export default function CategoryPage() {
         const subArticleIds = articleCategories
           ? articleCategories.filter((ac: ArticleCategory) => ac.category_id === subcategory.id).map((ac: ArticleCategory) => ac.article_id)
           : [];
-        return {
-          ...subcategory,
+            return {
+              ...subcategory,
           articles: Array.isArray(articles) ? articles.filter((article: Article) => subArticleIds.includes(article.id)) : [],
-        };
+            };
       });
-      setSubcategories(subcategoriesWithArticles);
+        setSubcategories(subcategoriesWithArticles);
 
       setLoading(false);
     };

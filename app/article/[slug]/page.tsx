@@ -34,9 +34,9 @@ export default function ArticlePage() {
       setNotFound(false);
       let articles = dataCache.getArticles();
       if (!articles) {
-        const { data, error } = await supabase
-          .from("articles")
-          .select("id, title, slug, content, status")
+      const { data, error } = await supabase
+        .from("articles")
+        .select("id, title, slug, content, status")
           .eq("status", "published");
         if (!error && data) {
           articles = data;
