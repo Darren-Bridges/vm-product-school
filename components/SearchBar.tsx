@@ -5,6 +5,8 @@ import { supabase } from "../lib/supabaseClient";
 import Link from "next/link";
 import { Input } from "./ui/input";
 import { Search } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import { getArticleAccessFilter } from "../utils/accessControl";
 
 interface Article {
   id: string;
@@ -24,6 +26,7 @@ export function SearchBar({ className }: SearchBarProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { user, isSuperAdmin } = useAuth();
 
   // Keyboard shortcut handler
   useEffect(() => {
@@ -46,12 +49,13 @@ export function SearchBar({ className }: SearchBarProps) {
       setShowDropdown(false);
       return;
     }
+    const allowedAccess = getArticleAccessFilter(user, isSuperAdmin);
     searchTimeout.current = setTimeout(async () => {
       const query = supabase
         .from("articles")
-        .select("id, title, slug, status, content")
+        .select("id, title, slug, status, content, access_level")
         .ilike("title", `%${search}%`)
-        .eq("status", "published")
+        .in("access_level", allowedAccess)
         .limit(5);
       const { data, error } = await query;
       if (!error && data) {
@@ -66,7 +70,7 @@ export function SearchBar({ className }: SearchBarProps) {
     return () => {
       if (searchTimeout.current) clearTimeout(searchTimeout.current);
     };
-  }, [search]);
+  }, [search, user, isSuperAdmin]);
 
   return (
     <div className={`relative ${className}`}>

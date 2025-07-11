@@ -23,6 +23,10 @@ class DataCache {
     this.categories = { data, timestamp: Date.now() };
   }
 
+  clearCategories() {
+    this.categories = null;
+  }
+
   getArticles(): any[] | null {
     if (this.articles && Date.now() - this.articles.timestamp < CACHE_DURATION) {
       return this.articles.data;
@@ -32,6 +36,10 @@ class DataCache {
 
   setArticles(data: any[]) {
     this.articles = { data, timestamp: Date.now() };
+  }
+
+  clearArticles() {
+    this.articles = null;
   }
 
   getArticleCategories(): any[] | null {
@@ -44,6 +52,20 @@ class DataCache {
   setArticleCategories(data: any[]) {
     this.articleCategories = { data, timestamp: Date.now() };
   }
+
+  clearArticleCategories() {
+    this.articleCategories = null;
+  }
+
+  clearAll() {
+    this.clearCategories();
+    this.clearArticles();
+    this.clearArticleCategories();
+  }
 }
 
-export const dataCache = new DataCache(); 
+export const dataCache = new DataCache();
+export const clearArticlesCache = () => dataCache.clearArticles();
+export const clearCategoriesCache = () => dataCache.clearCategories();
+export const clearArticleCategoriesCache = () => dataCache.clearArticleCategories();
+export const clearAllDataCache = () => dataCache.clearAll(); 

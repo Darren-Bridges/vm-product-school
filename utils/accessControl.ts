@@ -58,3 +58,21 @@ export function getAvailableAccessLevels(userRole?: string): AccessLevel[] {
 export function canEditAccessLevel(userRole?: string): boolean {
   return userRole === 'superadmin';
 } 
+
+/**
+ * Get allowed access levels for a user (for filtering in Supabase queries)
+ */
+export function getAllowedArticleAccessLevels(user: any, isSuperAdmin: boolean): AccessLevel[] {
+  if (isSuperAdmin) return ['vm_internal', 'external_clients', 'public'];
+  if (user) return ['external_clients', 'public'];
+  return ['public'];
+}
+
+/**
+ * Get a Supabase filter for allowed access levels (for .in() queries)
+ */
+export function getArticleAccessFilter(user: any, isSuperAdmin: boolean) {
+  const allowed = getAllowedArticleAccessLevels(user, isSuperAdmin);
+  // For Supabase: .in('access_level', allowed)
+  return allowed;
+} 

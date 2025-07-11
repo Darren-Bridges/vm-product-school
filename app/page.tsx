@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { dataCache } from '../utils/dataCache';
+import { useAuth } from "../context/AuthContext";
+import { getArticleAccessFilter } from "../utils/accessControl";
 
 interface Category {
   id: string;
@@ -22,6 +24,8 @@ interface Article {
   status?: string;
   content?: string;
   created_at?: string;
+  access_level?: string[];
+  category_id?: string;
 }
 
 export default function Home() {
@@ -32,6 +36,9 @@ export default function Home() {
   const [showDropdown, setShowDropdown] = useState(false);
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
   const [whatsNew, setWhatsNew] = useState<Article[]>([]);
+  const [accessibleArticles, setAccessibleArticles] = useState<Article[]>([]);
+  const [articleCategories, setArticleCategories] = useState<{ article_id: string, category_id: string }[]>([]);
+  const { user, isSuperAdmin } = useAuth();
 
 
   useEffect(() => {
@@ -56,20 +63,34 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    // Fetch all published articles for search and what's new
+    const fetchArticleCategories = async () => {
+      const { data, error } = await supabase
+        .from("article_categories")
+        .select("article_id, category_id");
+      if (!error && data) {
+        setArticleCategories(data);
+      }
+    };
+    fetchArticleCategories();
+  }, []);
+
+  useEffect(() => {
+    // Fetch all articles for search and what's new, filtered by access
     const fetchArticles = async () => {
       let articles = dataCache.getArticles();
+      const allowedAccess = getArticleAccessFilter(user, isSuperAdmin);
       if (!articles) {
-      const { data, error } = await supabase
-        .from("articles")
-        .select("id, title, slug, created_at, status, content")
-          .eq("status", "published");
+        const { data, error } = await supabase
+          .from("articles")
+          .select("id, title, slug, created_at, status, content, access_level")
+          .in("access_level", allowedAccess);
         if (!error && data) {
           articles = data;
           dataCache.setArticles(data);
         }
       }
       if (articles) {
+        setAccessibleArticles(articles);
         // For what's new, sort and take 5 most recent
         setWhatsNew(
           articles
@@ -86,7 +107,7 @@ export default function Home() {
       }
     };
     fetchArticles();
-  }, [search]);
+  }, [search, user, isSuperAdmin]);
 
   // Live search with debounce
   useEffect(() => {
@@ -96,12 +117,13 @@ export default function Home() {
       setShowDropdown(false);
       return;
     }
+    const allowedAccess = getArticleAccessFilter(user, isSuperAdmin);
     searchTimeout.current = setTimeout(async () => {
       const query = supabase
         .from("articles")
-        .select("id, title, slug, status, content")
+        .select("id, title, slug, status, content, access_level")
         .ilike("title", `%${search}%`)
-        .eq("status", "published")
+        .in("access_level", allowedAccess)
         .limit(5);
       const { data, error } = await query;
       if (!error && data) {
@@ -116,12 +138,20 @@ export default function Home() {
     return () => {
       if (searchTimeout.current) clearTimeout(searchTimeout.current);
     };
-  }, [search]);
+  }, [search, user, isSuperAdmin]);
+
+  const accessibleCategoryIds = new Set(
+    articleCategories
+      .filter(ac => accessibleArticles.some(a => a.id === ac.article_id))
+      .map(ac => ac.category_id)
+  );
 
   return (
     <main className="max-w-3xl mx-auto p-8 mt-20">
       <h1 className="text-3xl font-bold mb-2">Help Centre</h1>
-      <p className="mb-6 text-muted-foreground">Search for help articles or browse by category.</p>
+      <p className="mb-6 text-muted-foreground">
+        Search for help articles or browse by category. Login with your Vita Mojo account to view more articles and content.
+      </p>
       <div className="relative mb-8">
         <Input
           type="text"
@@ -171,7 +201,7 @@ export default function Home() {
         <div className="text-muted-foreground">No categories found.</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {categories.map(category => (
+          {categories.filter(category => accessibleCategoryIds.has(category.id)).map(category => (
             <Link
               key={category.id}
               href={`/category/${category.slug}`}

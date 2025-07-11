@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { clearAllDataCache } from "../utils/dataCache";
 
 interface Role {
   displayName: string;
@@ -53,6 +54,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem("auth_user", JSON.stringify(user));
     // Set cookie for middleware (1 hour expiry)
     document.cookie = `auth_token=${token.value}; path=/; max-age=3600; samesite=lax`;
+    clearAllDataCache(); // Invalidate cache on login
   };
 
   const logout = () => {
@@ -62,6 +64,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem("auth_user");
     // Remove cookie
     document.cookie = "auth_token=; path=/; max-age=0; samesite=lax";
+    clearAllDataCache(); // Invalidate cache on logout
+    window.location.assign("/"); // Force redirect to home
   };
 
   const isSuperAdmin = user?.role.displayName === "Super Admin";

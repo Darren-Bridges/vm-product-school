@@ -52,12 +52,14 @@ export function NavBar({ onOpenSidebar }: NavBarProps) {
         <Link href="/" className="font-bold text-lg">Product School</Link>
         <div className="mx-2 h-6 border-l border-gray-300" />
         <Link href="/" >Help Centre</Link>
-        <Link
-          href="/roadmap"
-          className="ml-4 flex items-center gap-2 hover:text-foreground transition-colors"
-        >
-          Roadmap
-        </Link>
+        {user && (
+          <Link
+            href="/roadmap"
+            className="ml-4 flex items-center gap-2 hover:text-foreground transition-colors"
+          >
+            Roadmap
+          </Link>
+        )}
       </div>
       {shouldShowSearch && (
         <div className="flex-1 max-w-md mx-4 md:mx-8">

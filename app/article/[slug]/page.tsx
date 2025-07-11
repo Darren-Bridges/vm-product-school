@@ -6,6 +6,8 @@ import Link from "next/link";
 import { Skeleton } from "../../../components/ui/skeleton";
 import { ArticleContentViewer } from "../../../components/ArticleContentViewer";
 import { dataCache } from '../../../utils/dataCache';
+import { useAuth } from "../../../context/AuthContext";
+import { getArticleAccessFilter } from "../../../utils/accessControl";
 
 interface Article {
   id: string;
@@ -27,17 +29,19 @@ export default function ArticlePage() {
   const [otherArticles, setOtherArticles] = useState<RelatedArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const { user, isSuperAdmin } = useAuth();
 
   useEffect(() => {
     const fetchArticle = async () => {
       setLoading(true);
       setNotFound(false);
       let articles = dataCache.getArticles();
+      const allowedAccess = getArticleAccessFilter(user, isSuperAdmin);
       if (!articles) {
-      const { data, error } = await supabase
-        .from("articles")
-        .select("id, title, slug, content, status")
-          .eq("status", "published");
+        const { data, error } = await supabase
+          .from("articles")
+          .select("id, title, slug, content, status, access_level")
+          .in("access_level", allowedAccess);
         if (!error && data) {
           articles = data;
           dataCache.setArticles(data);
@@ -67,7 +71,7 @@ export default function ArticlePage() {
       setLoading(false);
     };
     if (slug) fetchArticle();
-  }, [slug]);
+  }, [slug, user, isSuperAdmin]);
 
   if (loading) {
     return (

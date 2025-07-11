@@ -6,6 +6,8 @@ import Link from "next/link";
 import { Skeleton } from "../../../../components/ui/skeleton";
 import { ArticleContentViewer } from "../../../../components/ArticleContentViewer";
 import { dataCache } from '../../../../utils/dataCache';
+import { useAuth } from "../../../../context/AuthContext";
+import { getArticleAccessFilter } from "../../../../utils/accessControl";
 
 interface Category {
   id: string;
@@ -40,6 +42,7 @@ export default function CategoryArticlePage() {
   const [otherArticles, setOtherArticles] = useState<RelatedArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const { user, isSuperAdmin } = useAuth();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -48,6 +51,7 @@ export default function CategoryArticlePage() {
       let categories = dataCache.getCategories();
       let articles = dataCache.getArticles();
       let articleCategories = dataCache.getArticleCategories();
+      const allowedAccess = getArticleAccessFilter(user, isSuperAdmin);
       if (!categories) {
         const { data, error } = await supabase
         .from("categories")
@@ -61,8 +65,8 @@ export default function CategoryArticlePage() {
       if (!articles) {
         const { data, error } = await supabase
           .from("articles")
-          .select("id, title, slug, content, status, created_at")
-          .eq("status", "published");
+          .select("id, title, slug, content, status, created_at, access_level")
+          .in("access_level", allowedAccess);
         if (!error && data) {
           articles = data;
           dataCache.setArticles(data);
@@ -113,7 +117,7 @@ export default function CategoryArticlePage() {
       setLoading(false);
     };
     if (categorySlug && articleSlug) fetchData();
-  }, [categorySlug, articleSlug]);
+  }, [categorySlug, articleSlug, user, isSuperAdmin]);
 
   if (loading) {
     return (

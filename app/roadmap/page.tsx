@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { CheckCircle, Clock, Play, Link as LinkIcon } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
+import { useRouter } from "next/navigation";
 
 interface RoadmapItem {
   id: string;
@@ -38,6 +40,15 @@ let roadmapCache: { items: RoadmapItem[]; timestamp: number } | null = null;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in ms
 
 export default function RoadmapPage() {
+  const { user } = useAuth();
+  const router = useRouter();
+  // Redirect if not logged in
+  useEffect(() => {
+    if (user === null) {
+      router.replace("/login");
+    }
+  }, [user, router]);
+
   const [roadmapItems, setRoadmapItems] = useState<RoadmapItem[]>([]);
   const [loading, setLoading] = useState(true);
 
