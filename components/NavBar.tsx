@@ -53,10 +53,8 @@ export function NavBar({ onOpenSidebar }: NavBarProps) {
         <div className="mx-2 h-6 border-l border-gray-300" />
         <Link href="/" >Help Centre</Link>
         <Link
-          href="#"
-          aria-disabled="true"
-          tabIndex={-1}
-          className="ml-4 flex items-center gap-2 text-muted-foreground cursor-not-allowed select-none pointer-events-none"
+          href="/roadmap"
+          className="ml-4 flex items-center gap-2 hover:text-foreground transition-colors"
         >
           Roadmap
         </Link>

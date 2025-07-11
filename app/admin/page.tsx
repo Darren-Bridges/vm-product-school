@@ -136,6 +136,17 @@ export default function AdminPage() {
                 </Link>
                 
                 <Link
+                  href="/admin/roadmap"
+                  className="flex items-center p-4 border rounded-lg hover:bg-accent transition-colors"
+                >
+                  <div className="h-5 w-5 mr-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded"></div>
+                  <div>
+                    <div className="font-medium">Manage Roadmap</div>
+                    <div className="text-sm text-muted-foreground">Product roadmap items</div>
+                  </div>
+                </Link>
+                
+                <Link
                   href="/admin/tours"
                   className="flex items-center p-4 border rounded-lg hover:bg-accent transition-colors"
                 >
