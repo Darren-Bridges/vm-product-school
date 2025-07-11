@@ -3,9 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { Badge } from "../../components/ui/badge";
 import { CheckCircle, Clock, Play, Link as LinkIcon } from "lucide-react";
-import { Skeleton } from "../../components/ui/skeleton";
 
 interface RoadmapItem {
   id: string;
@@ -20,17 +18,20 @@ interface RoadmapItem {
   article_slug?: string; // Added article_slug to the interface
 }
 
-const statusConfig = {
-  active: { label: "Active", color: "bg-blue-100 text-blue-800", icon: Play },
-  planned: { label: "Planned", color: "bg-yellow-100 text-yellow-800", icon: Clock },
-  shipped: { label: "Shipped", color: "bg-green-100 text-green-800", icon: CheckCircle },
-};
-
-const priorityConfig = {
-  low: { label: "Low", color: "bg-gray-100 text-gray-800" },
-  medium: { label: "Medium", color: "bg-orange-100 text-orange-800" },
-  high: { label: "High", color: "bg-red-100 text-red-800" },
-};
+// Define SupabaseRoadmapItem for raw fetch
+interface SupabaseRoadmapItem {
+  id: string;
+  title: string;
+  description: string;
+  status: "active" | "planned" | "shipped";
+  priority: "low" | "medium" | "high";
+  shipped_month?: number;
+  shipped_year?: number;
+  article_id?: string | null;
+  articles?: { slug?: string | null } | null;
+  created_at: string;
+  updated_at: string;
+}
 
 export default function RoadmapPage() {
   const [roadmapItems, setRoadmapItems] = useState<RoadmapItem[]>([]);
@@ -46,9 +47,9 @@ export default function RoadmapPage() {
 
         if (error) throw error;
         // Map article_slug from joined articles
-        const items = (data || []).map((item: any) => ({
+        const items: RoadmapItem[] = (data || []).map((item: SupabaseRoadmapItem) => ({
           ...item,
-          article_slug: item.articles?.slug || null,
+          article_slug: item.articles?.slug || undefined,
         }));
         setRoadmapItems(items);
       } catch (error) {
@@ -98,7 +99,7 @@ export default function RoadmapPage() {
         <div className="mb-4">
           <h1 className="text-4xl font-bold text-foreground mb-4">Product Roadmap</h1>
           <p className="text-lg text-muted-foreground">
-            See what we're building and what's coming next
+            See what we&apos;re building and what&apos;s coming next
           </p>
         </div>
       </div>
@@ -207,9 +208,6 @@ export default function RoadmapPage() {
 }
 
 function RoadmapItemCard({ item }: { item: RoadmapItem }) {
-  const status = statusConfig[item.status];
-  const priority = priorityConfig[item.priority];
-
   return (
     <div className="border rounded-lg p-4 hover:bg-accent/50 transition-colors flex justify-between items-center">
       <div>
