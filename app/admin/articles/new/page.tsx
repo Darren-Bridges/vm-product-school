@@ -40,6 +40,7 @@ export default function CreateArticlePage() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [slug, setSlug] = useState("");
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
+  const [path, setPath] = useState("");
 
   useEffect(() => {
     if (!slugManuallyEdited) {
@@ -66,7 +67,7 @@ export default function CreateArticlePage() {
       const { data: articleData, error: articleError } = await supabase
         .from("articles")
         .insert([
-          { title, slug, content, status, access_level: accessLevel, author: user?.email || "" }
+          { title, slug, content, status, access_level: accessLevel, author: user?.email || "", path }
         ])
         .select()
         .single();
@@ -212,6 +213,19 @@ export default function CreateArticlePage() {
                       required
                     />
                     <p className="text-xs text-muted-foreground mt-1">This will be the article URL: /article/{slug || '<slug>'}</p>
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="path" className="block text-sm font-medium mb-1">Path</label>
+                    <input
+                      id="path"
+                      type="text"
+                      value={path}
+                      onChange={e => setPath(e.target.value)}
+                      placeholder="e.g., /inventory/setup"
+                      className="w-full px-3 py-2 border rounded"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Optional path for widget to show this article by default</p>
                   </div>
                   
                   <div>

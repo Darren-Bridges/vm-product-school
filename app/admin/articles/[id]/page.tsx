@@ -67,6 +67,7 @@ export default function EditArticlePage() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [slug, setSlug] = useState("");
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
+  const [path, setPath] = useState("");
 
   // Get user role based on isSuperAdmin
   const userRole = isSuperAdmin ? 'superadmin' : 'user';
@@ -87,7 +88,7 @@ export default function EditArticlePage() {
         // Fetch article data
         const { data: articleData, error: articleError } = await supabase
           .from("articles")
-          .select("title, slug, content, status, access_level, author")
+          .select("title, slug, content, status, access_level, author, path")
           .eq("id", articleId)
           .single();
 
@@ -103,6 +104,7 @@ export default function EditArticlePage() {
           setAccessLevel(articleData.access_level || "external_clients");
           setAuthor(articleData.author || null);
           setContent(articleData.content || "");
+          setPath(articleData.path || "");
         }
 
         // Fetch article categories
@@ -146,7 +148,7 @@ export default function EditArticlePage() {
       // Use the current slug state
       const { error: articleError } = await supabase
         .from("articles")
-        .update({ title, slug, content, status, access_level: accessLevel, updated_at: new Date().toISOString() })
+        .update({ title, slug, content, status, access_level: accessLevel, path, updated_at: new Date().toISOString() })
         .eq("id", articleId);
 
       if (articleError) {
@@ -417,6 +419,19 @@ export default function EditArticlePage() {
                       required
                     />
                     <p className="text-xs text-gray-500 mt-1">This will be the article URL: /article/{slug || '<slug>'}</p>
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="path" className="block text-sm font-medium mb-1">Path</label>
+                    <input
+                      id="path"
+                      type="text"
+                      value={path}
+                      onChange={e => setPath(e.target.value)}
+                      placeholder="e.g., /inventory/setup"
+                      className="w-full px-3 py-2 border rounded"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Optional path for widget to show this article by default</p>
                   </div>
                   
                   <div>

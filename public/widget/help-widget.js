@@ -280,29 +280,56 @@
     state.isOpen = true;
     elements.container.classList.add('help-widget--open');
     elements.search.focus();
-    
-    // Fetch all articles on first open or if cache expired
     const now = Date.now();
-    if (!allArticlesLoaded || (now - allArticlesFetchedAt > ALL_ARTICLES_CACHE_EXPIRY)) {
+    let showDefaultArticle = false;
+    let defaultArticle = null;
+    // If a path is provided, try to fetch the article by path
+    if (config.path) {
       showLoading();
-      fetch(withRoleParam(`${config.apiBaseUrl}/all-articles`), {
+      fetch(withRoleParam(`${config.apiBaseUrl}/article-by-path?path=${encodeURIComponent(config.path)}`), {
         headers: { 'X-API-Key': config.apiKey },
       })
         .then(res => res.json())
         .then(data => {
-          allArticles = data.articles || [];
-          allArticlesLoaded = true;
-          allArticlesFetchedAt = Date.now();
-          renderContent({ articles: allArticles });
+          if (data && data.article) {
+            defaultArticle = data.article;
+            renderArticleContent(defaultArticle);
+            state.currentArticle = defaultArticle;
+            state.viewMode = 'article';
+          } else {
+            // If not found, fall back to list view after fetching all articles
+            fetchAllArticlesAndShowList();
+          }
         })
-        .catch(err => {
-          showError('Failed to load articles');
+        .catch(() => {
+          fetchAllArticlesAndShowList();
         });
       return;
     }
-    // Load content if not already loaded
-    if (!elements.content.children.length || elements.content.querySelector('.help-widget__loading')) {
-      renderContent({ articles: allArticles });
+    // If no path, just fetch all articles and show list
+    fetchAllArticlesAndShowList();
+    function fetchAllArticlesAndShowList() {
+      if (!allArticlesLoaded || (now - allArticlesFetchedAt > ALL_ARTICLES_CACHE_EXPIRY)) {
+        showLoading();
+        fetch(withRoleParam(`${config.apiBaseUrl}/all-articles`), {
+          headers: { 'X-API-Key': config.apiKey },
+        })
+          .then(res => res.json())
+          .then(data => {
+            allArticles = data.articles || [];
+            allArticlesLoaded = true;
+            allArticlesFetchedAt = Date.now();
+            renderContent({ articles: allArticles });
+          })
+          .catch(err => {
+            showError('Failed to load articles');
+          });
+        return;
+      }
+      // Load content if not already loaded
+      if (!elements.content.children.length || elements.content.querySelector('.help-widget__loading')) {
+        renderContent({ articles: allArticles });
+      }
     }
   }
 
