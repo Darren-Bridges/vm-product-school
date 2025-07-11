@@ -159,19 +159,6 @@ export function ArticleContentEditor({ value, onChange }: ArticleContentEditorPr
     }
   }, [linkDialogOpen, editingLink, editor]);
 
-  const handleLoomEmbed = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (loomUrl && editor) {
-      editor.chain().focus().insertContent({
-        type: 'iframe',
-        attrs: { src: loomUrl, width: 640, height: 360, frameborder: 0, allowfullscreen: true },
-      }).run();
-      setLoomDialogOpen(false);
-      setLoomUrl("");
-    }
-  };
-
-
 
   return (
     <div className="article-editor-responsive">
