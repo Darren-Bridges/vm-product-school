@@ -138,7 +138,7 @@ export function ArticleContentEditor({ value, onChange }: ArticleContentEditorPr
   };
 
   return (
-    <div>
+    <div className="article-editor-responsive">
       {/* Link Dialog outside the main form */}
       <Dialog open={linkDialogOpen} onOpenChange={open => {
         setLinkDialogOpen(open);
@@ -176,8 +176,10 @@ export function ArticleContentEditor({ value, onChange }: ArticleContentEditorPr
               placeholder="https://example.com"
               value={linkUrl}
               onChange={e => setLinkUrl(e.target.value)}
-              className="w-full px-3 py-2 border rounded mb-2"
+              className="w-full px-3 py-2 border rounded mb-2 text-base"
               required
+              inputMode="text"
+              style={{ fontSize: '16px' }}
             />
             <label className="block text-sm font-medium mb-1" htmlFor="link-text">Link Text</label>
             <input
@@ -186,8 +188,10 @@ export function ArticleContentEditor({ value, onChange }: ArticleContentEditorPr
               placeholder="Link text"
               value={linkText}
               onChange={e => setLinkText(e.target.value)}
-              className="w-full px-3 py-2 border rounded mb-4"
+              className="w-full px-3 py-2 border rounded mb-4 text-base"
               required
+              inputMode="text"
+              style={{ fontSize: '16px' }}
             />
             <DialogFooter>
               {editingLink && (
@@ -231,8 +235,10 @@ export function ArticleContentEditor({ value, onChange }: ArticleContentEditorPr
               placeholder="https://www.loom.com/share/..."
               value={loomUrl}
               onChange={e => setLoomUrl(e.target.value)}
-              className="w-full px-3 py-2 border rounded mb-4"
+              className="w-full px-3 py-2 border rounded mb-4 text-base"
               required
+              inputMode="text"
+              style={{ fontSize: '16px' }}
             />
             <DialogFooter>
               <DialogClose asChild>
