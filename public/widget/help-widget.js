@@ -281,32 +281,7 @@
     elements.container.classList.add('help-widget--open');
     elements.search.focus();
     const now = Date.now();
-    let showDefaultArticle = false;
-    let defaultArticle = null;
-    // If a path is provided, try to fetch the article by path
-    if (config.path) {
-      showLoading();
-      fetch(withRoleParam(`${config.apiBaseUrl}/article-by-path?path=${encodeURIComponent(config.path)}`), {
-        headers: { 'X-API-Key': config.apiKey },
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (data && data.article) {
-            defaultArticle = data.article;
-            renderArticleContent(defaultArticle);
-            state.currentArticle = defaultArticle;
-            state.viewMode = 'article';
-          } else {
-            // If not found, fall back to list view after fetching all articles
-            fetchAllArticlesAndShowList();
-          }
-        })
-        .catch(() => {
-          fetchAllArticlesAndShowList();
-        });
-      return;
-    }
-    // If no path, just fetch all articles and show list
+    // Always fetch all articles and then check for a path match
     fetchAllArticlesAndShowList();
     function fetchAllArticlesAndShowList() {
       if (!allArticlesLoaded || (now - allArticlesFetchedAt > ALL_ARTICLES_CACHE_EXPIRY)) {
@@ -319,7 +294,7 @@
             allArticles = data.articles || [];
             allArticlesLoaded = true;
             allArticlesFetchedAt = Date.now();
-            renderContent({ articles: allArticles });
+            maybeShowDefaultArticleOrList();
           })
           .catch(err => {
             showError('Failed to load articles');
@@ -328,8 +303,22 @@
       }
       // Load content if not already loaded
       if (!elements.content.children.length || elements.content.querySelector('.help-widget__loading')) {
-        renderContent({ articles: allArticles });
+        maybeShowDefaultArticleOrList();
       }
+    }
+    function maybeShowDefaultArticleOrList() {
+      if (config.path && allArticles && allArticles.length > 0) {
+        const match = allArticles.find(a => a.path === config.path);
+        if (match) {
+          renderArticleContent(match);
+          state.currentArticle = match;
+          state.viewMode = 'article';
+          return;
+        }
+      }
+      renderContent({ articles: allArticles });
+      state.currentArticle = null;
+      state.viewMode = 'list';
     }
   }
 
