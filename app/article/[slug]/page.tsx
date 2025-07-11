@@ -5,6 +5,7 @@ import { supabase } from "../../../lib/supabaseClient";
 import Link from "next/link";
 import { Skeleton } from "../../../components/ui/skeleton";
 import { ArticleContentViewer } from "../../../components/ArticleContentViewer";
+import { dataCache } from '../../../utils/dataCache';
 
 interface Article {
   id: string;
@@ -31,27 +32,30 @@ export default function ArticlePage() {
     const fetchArticle = async () => {
       setLoading(true);
       setNotFound(false);
-      // Fetch the article by slug, only if published
-      const { data, error } = await supabase
-        .from("articles")
-        .select("id, title, slug, content, status")
-        .eq("slug", slug)
-        .eq("status", "published")
-        .single();
-      if (error || !data) {
+      let articles = dataCache.getArticles();
+      if (!articles) {
+        const { data, error } = await supabase
+          .from("articles")
+          .select("id, title, slug, content, status")
+          .eq("status", "published");
+        if (!error && data) {
+          articles = data;
+          dataCache.setArticles(data);
+        }
+      }
+      if (!articles) {
         setNotFound(true);
         setLoading(false);
         return;
       }
-      setArticle(data);
-      // Fetch other published articles for the sidebar
-      const { data: others } = await supabase
-        .from("articles")
-        .select("id, title, slug")
-        .eq("status", "published")
-        .neq("slug", slug)
-        .order("title");
-      setOtherArticles(others || []);
+      const article = articles.find((a: any) => a.slug === slug && a.status === 'published');
+      if (!article) {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
+      setArticle(article);
+      setOtherArticles(articles.filter((a: any) => a.slug !== slug));
       setLoading(false);
     };
     if (slug) fetchArticle();

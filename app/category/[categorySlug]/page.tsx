@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { supabase } from "../../../lib/supabaseClient";
 import Link from "next/link";
 import { Skeleton } from "../../../components/ui/skeleton";
+import { dataCache } from '../../../utils/dataCache';
 
 interface Category {
   id: string;
@@ -43,90 +44,69 @@ export default function CategoryPage() {
     const fetchCategory = async () => {
       setLoading(true);
       setNotFound(false);
-      
-      // Fetch the category by slug
-      const { data: categoryData, error: categoryError } = await supabase
-        .from("categories")
-        .select("id, name, description, slug, order, parent_id")
-        .eq("slug", categorySlug)
-        .single();
-
-      if (categoryError || !categoryData) {
+      let categories = dataCache.getCategories();
+      let articles = dataCache.getArticles();
+      let articleCategories = dataCache.getArticleCategories();
+      if (!categories) {
+        const { data, error } = await supabase
+          .from("categories")
+          .select("id, name, description, slug, order, parent_id")
+          .order("order", { ascending: true });
+        if (!error && data) {
+          categories = data;
+          dataCache.setCategories(data);
+        }
+      }
+      if (!articles) {
+        const { data, error } = await supabase
+          .from("articles")
+          .select("id, title, slug, status, content, created_at")
+          .eq("status", "published");
+        if (!error && data) {
+          articles = data;
+          dataCache.setArticles(data);
+        }
+      }
+      if (!articleCategories) {
+        const { data, error } = await supabase
+          .from("article_categories")
+          .select("article_id, category_id");
+        if (!error && data) {
+          articleCategories = data;
+          dataCache.setArticleCategories(data);
+        }
+      }
+      if (!categories) {
         setNotFound(true);
         setLoading(false);
         return;
       }
-
+      const categoryData = categories.find((c: any) => c.slug === categorySlug);
+      if (!categoryData) {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
       setCategory(categoryData);
 
-      // Fetch articles in this category - get article IDs first
-      const { data: articleIdsData, error: articleIdsError } = await supabase
-        .from("article_categories")
-        .select("article_id")
-        .eq("category_id", categoryData.id);
-
-      if (!articleIdsError && articleIdsData) {
-        const articleIds = articleIdsData.map(item => item.article_id);
-        
-        // Only fetch articles if we have article IDs
-        if (articleIds.length > 0) {
-          // Fetch the actual articles
-          const { data: articlesData, error: articlesError } = await supabase
-            .from("articles")
-            .select("id, title, slug, status, content")
-            .in("id", articleIds)
-            .eq("status", "published");
-
-          if (!articlesError && articlesData) {
-            setArticles(articlesData);
-          }
-        }
-      }
+      // Find articles in this category
+      const articleIds = articleCategories
+        ? articleCategories.filter((ac: any) => ac.category_id === categoryData.id).map((ac: any) => ac.article_id)
+        : [];
+      setArticles(Array.isArray(articles) ? articles.filter((a: any) => articleIds.includes(a.id)) : []);
 
       // Fetch subcategories if this is a parent category
-      const { data: subcategoriesData, error: subcategoriesError } = await supabase
-        .from("categories")
-        .select("id, name, description, slug, order")
-        .eq("parent_id", categoryData.id)
-        .order("order", { ascending: true });
-
-      if (!subcategoriesError && subcategoriesData) {
-        // Fetch articles for each subcategory
-        const subcategoriesWithArticles = await Promise.all(
-          subcategoriesData.map(async (subcategory) => {
-            // Get article IDs for this subcategory
-            const { data: subArticleIdsData } = await supabase
-              .from("article_categories")
-              .select("article_id")
-              .eq("category_id", subcategory.id);
-
-            let subArticles: Article[] = [];
-            if (subArticleIdsData) {
-              const subArticleIds = subArticleIdsData.map(item => item.article_id);
-              
-              // Only fetch articles if we have article IDs
-              if (subArticleIds.length > 0) {
-                // Fetch the actual articles
-                const { data: subArticlesData } = await supabase
-                  .from("articles")
-                  .select("id, title, slug, status, content")
-                  .in("id", subArticleIds)
-                  .eq("status", "published");
-
-                if (subArticlesData) {
-                  subArticles = subArticlesData;
-                }
-              }
-            }
-
-            return {
-              ...subcategory,
-              articles: subArticles
-            };
-          })
-        );
-        setSubcategories(subcategoriesWithArticles);
-      }
+      const subcategoriesData = categories.filter((c: any) => c.parent_id === categoryData.id);
+      const subcategoriesWithArticles = subcategoriesData.map((subcategory: any) => {
+        const subArticleIds = articleCategories
+          ? articleCategories.filter((ac: any) => ac.category_id === subcategory.id).map((ac: any) => ac.article_id)
+          : [];
+        return {
+          ...subcategory,
+          articles: Array.isArray(articles) ? articles.filter((a: any) => subArticleIds.includes(a.id)) : [],
+        };
+      });
+      setSubcategories(subcategoriesWithArticles);
 
       setLoading(false);
     };

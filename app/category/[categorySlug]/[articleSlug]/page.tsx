@@ -5,6 +5,7 @@ import { supabase } from "../../../../lib/supabaseClient";
 import Link from "next/link";
 import { Skeleton } from "../../../../components/ui/skeleton";
 import { ArticleContentViewer } from "../../../../components/ArticleContentViewer";
+import { dataCache } from '../../../../utils/dataCache';
 
 interface Category {
   id: string;
@@ -39,66 +40,65 @@ export default function CategoryArticlePage() {
     const fetchData = async () => {
       setLoading(true);
       setNotFound(false);
-
-      // Fetch the category first
-      const { data: categoryData, error: categoryError } = await supabase
-        .from("categories")
-        .select("id, name, slug, description")
-        .eq("slug", categorySlug)
-        .single();
-
-      if (categoryError || !categoryData) {
-        setNotFound(true);
-        setLoading(false);
-        return;
-      }
-
-      setCategory(categoryData);
-
-      // Fetch the article by slug, only if published
-      const { data: articleData, error: articleError } = await supabase
-        .from("articles")
-        .select("id, title, slug, content, status")
-        .eq("slug", articleSlug)
-        .eq("status", "published")
-        .single();
-
-      if (articleError || !articleData) {
-        setNotFound(true);
-        setLoading(false);
-        return;
-      }
-
-      setArticle(articleData);
-
-      // Fetch other articles in the same category - get article IDs first
-      const { data: otherArticleIdsData, error: otherArticleIdsError } = await supabase
-        .from("article_categories")
-        .select("article_id")
-        .eq("category_id", categoryData.id)
-        .neq("article_id", articleData.id);
-
-      if (!otherArticleIdsError && otherArticleIdsData) {
-        const otherArticleIds = otherArticleIdsData.map(item => item.article_id);
-        
-        // Only fetch articles if we have article IDs
-        if (otherArticleIds.length > 0) {
-          // Fetch the actual articles
-          const { data: otherArticlesData, error: otherArticlesError } = await supabase
-            .from("articles")
-            .select("id, title, slug")
-            .in("id", otherArticleIds)
-            .eq("status", "published");
-
-          if (!otherArticlesError && otherArticlesData) {
-            setOtherArticles(otherArticlesData);
-          }
+      let categories = dataCache.getCategories();
+      let articles = dataCache.getArticles();
+      let articleCategories = dataCache.getArticleCategories();
+      if (!categories) {
+        const { data, error } = await supabase
+          .from("categories")
+          .select("id, name, slug, description")
+          .order("order", { ascending: true });
+        if (!error && data) {
+          categories = data;
+          dataCache.setCategories(data);
         }
       }
+      if (!articles) {
+        const { data, error } = await supabase
+          .from("articles")
+          .select("id, title, slug, content, status, created_at")
+          .eq("status", "published");
+        if (!error && data) {
+          articles = data;
+          dataCache.setArticles(data);
+        }
+      }
+      if (!articleCategories) {
+        const { data, error } = await supabase
+          .from("article_categories")
+          .select("article_id, category_id");
+        if (!error && data) {
+          articleCategories = data;
+          dataCache.setArticleCategories(data);
+        }
+      }
+      if (!categories || !articles || !articleCategories) {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
+      const categoryData = categories.find((c: any) => c.slug === categorySlug);
+      if (!categoryData) {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
+      setCategory(categoryData);
+      const articleData = articles.find((a: any) => a.slug === articleSlug && a.status === 'published');
+      if (!articleData) {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
+      setArticle(articleData);
+      // Find other articles in the same category (requires article-category mapping)
+      const otherArticleIds = articleCategories
+        ? articleCategories.filter((ac: any) => ac.category_id === categoryData.id && ac.article_id !== articleData.id).map((ac: any) => ac.article_id)
+        : [];
+      setOtherArticles(Array.isArray(articles) ? articles.filter((a: any) => otherArticleIds.includes(a.id)) : []);
 
       setLoading(false);
     };
-
     if (categorySlug && articleSlug) fetchData();
   }, [categorySlug, articleSlug]);
 

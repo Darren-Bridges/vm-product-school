@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Input } from "@/components/ui/input";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { dataCache } from '../utils/dataCache';
 
 interface Category {
   id: string;
@@ -36,30 +37,56 @@ export default function Home() {
   useEffect(() => {
     const fetchCategories = async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("categories")
-        .select("id, name, description, order, parent_id, slug")
-        .is("parent_id", null)
-        .order("order", { ascending: true });
-      if (!error && data) setCategories(data);
+      let categories = dataCache.getCategories();
+      if (!categories) {
+        const { data, error } = await supabase
+          .from("categories")
+          .select("id, name, description, order, parent_id, slug")
+          .is("parent_id", null)
+          .order("order", { ascending: true });
+        if (!error && data) {
+          categories = data;
+          dataCache.setCategories(data);
+        }
+      }
+      if (categories) setCategories(categories);
       setLoading(false);
     };
     fetchCategories();
   }, []);
 
   useEffect(() => {
-    // Fetch the 5 most recently created published articles
-    const fetchWhatsNew = async () => {
-      const { data, error } = await supabase
-        .from("articles")
-        .select("id, title, slug, created_at, status, content")
-        .eq("status", "published")
-        .order("created_at", { ascending: false })
-        .limit(5);
-      if (!error && data) setWhatsNew(data);
+    // Fetch all published articles for search and what's new
+    const fetchArticles = async () => {
+      let articles = dataCache.getArticles();
+      if (!articles) {
+        const { data, error } = await supabase
+          .from("articles")
+          .select("id, title, slug, created_at, status, content")
+          .eq("status", "published");
+        if (!error && data) {
+          articles = data;
+          dataCache.setArticles(data);
+        }
+      }
+      if (articles) {
+        // For what's new, sort and take 5 most recent
+        setWhatsNew(
+          articles
+            .slice()
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .slice(0, 5)
+        );
+        // For search, filter by search term
+        if (search) {
+          const filtered = articles.filter(a => a.title.toLowerCase().includes(search.toLowerCase()));
+          setSearchResults(filtered.slice(0, 5));
+          setShowDropdown(filtered.length > 0);
+        }
+      }
     };
-    fetchWhatsNew();
-  }, []);
+    fetchArticles();
+  }, [search]);
 
   // Live search with debounce
   useEffect(() => {
