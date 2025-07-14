@@ -12,7 +12,9 @@
     appId: null,
     position: 'bottom-right',
     theme: 'dark', // FORCE DARK MODE for testing
-    apiBaseUrl: window.location.origin + '/api/widget',
+    apiBaseUrl: (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+      ? 'http://localhost:3001/api/widget'
+      : 'https://vm-product-school.vercel.app/api/widget',
     cacheExpiry: 5 * 60 * 1000, // 5 minutes
   };
 
@@ -157,6 +159,10 @@
     
     // Merge configuration
     config = { ...config, ...options };
+    // Always use production API base unless on localhost
+    if (typeof window !== 'undefined' && !(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+      config.apiBaseUrl = 'https://vm-product-school.vercel.app/api/widget';
+    }
     console.log('HelpWidget: Final config after merge:', config);
     
     if (!config.apiKey) {
