@@ -99,12 +99,33 @@ export default function WebWidgetFlowEditorPage() {
   const handleAddNode = (type: 'question' | 'article' | 'ticket' | 'flow') => {
     const id = uuidv4();
     let label = '';
-    if (type === 'question') label = 'New Question';
+    let style: React.CSSProperties = {};
+    if (type === 'question') {
+      label = 'New Question';
+      style = {
+        background: '#fef9c3', // yellow-100
+        border: '2px solid #eab308', // yellow-500
+        borderRadius: '8px',
+        padding: '10px',
+        minWidth: '150px',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+      };
+    }
     if (type === 'article') {
       setArticleSelectorOpen(true);
       return; // Don't add node yet, wait for article selection
     }
-    if (type === 'ticket') label = 'Support Form';
+    if (type === 'ticket') {
+      label = 'Support Form';
+      style = {
+        background: '#fca5a5', // red-200
+        border: '2px solid #ef4444', // red-500
+        borderRadius: '8px',
+        padding: '10px',
+        minWidth: '150px',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+      };
+    }
     if (type === 'flow') {
       setFlowSelectorOpen(true);
       return; // Don't add node yet, wait for flow selection
@@ -119,6 +140,7 @@ export default function WebWidgetFlowEditorPage() {
           x: 100 + Math.random() * 400,
           y: 100 + Math.random() * 200,
         },
+        style,
       },
     ]);
   };
@@ -175,6 +197,14 @@ export default function WebWidgetFlowEditorPage() {
         position: {
           x: 100 + Math.random() * 400,
           y: 100 + Math.random() * 200,
+        },
+        style: {
+          background: '#dbeafe', // blue-100
+          border: '2px solid #3b82f6', // blue-500
+          borderRadius: '8px',
+          padding: '10px',
+          minWidth: '150px',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
         },
       },
     ]);
@@ -236,19 +266,67 @@ export default function WebWidgetFlowEditorPage() {
     // eslint-disable-next-line
   }, [slug]);
 
+  const getNodeStyleByType = (type: string): React.CSSProperties => {
+    if (type === 'question') {
+      return {
+        background: '#fef9c3', // yellow-100
+        border: '2px solid #eab308', // yellow-500
+        borderRadius: '8px',
+        padding: '10px',
+        minWidth: '150px',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+      };
+    }
+    if (type === 'article') {
+      return {
+        background: '#dbeafe', // blue-100
+        border: '2px solid #3b82f6', // blue-500
+        borderRadius: '8px',
+        padding: '10px',
+        minWidth: '150px',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+      };
+    }
+    if (type === 'ticket') {
+      return {
+        background: '#fca5a5', // red-200
+        border: '2px solid #ef4444', // red-500
+        borderRadius: '8px',
+        padding: '10px',
+        minWidth: '150px',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+      };
+    }
+    if (type === 'flow') {
+      return {
+        background: '#f0f9ff', // light blue
+        border: '2px solid #0ea5e9', // blue-400
+        borderRadius: '8px',
+        padding: '10px',
+        minWidth: '150px',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+      };
+    }
+    return {};
+  };
+
   // Save flow to Supabase
   const handleSave = async () => {
     if (!flow) return;
     setSaving(true);
+    // Ensure all nodes have the correct style for their type
+    const styledNodes = nodes.map(n => ({
+      ...n,
+      style: getNodeStyleByType(n.type || (n.data && n.data.type) || 'question'),
+    }));
     await supabase
       .from('web_widget_flows')
       .update({
-        flow_data: { nodes, edges },
+        flow_data: { nodes: styledNodes, edges },
         updated_at: new Date().toISOString(),
       })
       .eq('id', flow.id);
     setSaving(false);
-    alert('Flow saved!');
   };
 
   // Set this flow as default
@@ -269,10 +347,8 @@ export default function WebWidgetFlowEditorPage() {
         .eq('id', flow.id);
       
       setIsDefault(true);
-      alert('Flow set as default!');
     } catch (error) {
       console.error('Error setting default flow:', error);
-      alert('Error setting flow as default');
     } finally {
       setSettingDefault(false);
     }
