@@ -43,6 +43,80 @@
     closeButton: null,
   };
 
+  // --- BEGIN: Console and Network Capture ---
+  const _consoleLog = console.log, _consoleError = console.error, _consoleWarn = console.warn, _consoleInfo = console.info;
+  const capturedConsole = [];
+  function pushConsole(type, args) {
+    capturedConsole.push({ type, args: Array.from(args), ts: new Date().toISOString() });
+    if (capturedConsole.length > 50) capturedConsole.shift();
+  }
+  console.log = function() { pushConsole('log', arguments); _consoleLog.apply(console, arguments); };
+  console.error = function() { pushConsole('error', arguments); _consoleError.apply(console, arguments); };
+  console.warn = function() { pushConsole('warn', arguments); _consoleWarn.apply(console, arguments); };
+  console.info = function() { pushConsole('info', arguments); _consoleInfo.apply(console, arguments); };
+
+  const capturedNetwork = [];
+  function pushNetwork(entry) {
+    capturedNetwork.push(entry);
+    if (capturedNetwork.length > 20) capturedNetwork.shift();
+  }
+  // Patch fetch
+  const origFetch = window.fetch;
+  window.fetch = async function(...args) {
+    const start = Date.now();
+    let entry = { type: 'fetch', url: args[0], options: args[1], ts: new Date().toISOString() };
+    try {
+      const resp = await origFetch.apply(this, args);
+      entry.status = resp.status;
+      entry.statusText = resp.statusText;
+      entry.durationMs = Date.now() - start;
+      // Try to clone and get text (limit size)
+      try {
+        const clone = resp.clone();
+        const text = await clone.text();
+        entry.response = text.length > 500 ? text.slice(0, 500) + '…' : text;
+      } catch {}
+      pushNetwork(entry);
+      return resp;
+    } catch (err) {
+      entry.error = err && err.message;
+      entry.durationMs = Date.now() - start;
+      pushNetwork(entry);
+      throw err;
+    }
+  };
+  // Patch XMLHttpRequest
+  const OrigXHR = window.XMLHttpRequest;
+  function PatchedXHR() {
+    const xhr = new OrigXHR();
+    let entry = { type: 'xhr', method: '', url: '', ts: new Date().toISOString() };
+    let start = 0;
+    const origOpen = xhr.open;
+    xhr.open = function(method, url) {
+      entry.method = method;
+      entry.url = url;
+      origOpen.apply(xhr, arguments);
+    };
+    xhr.addEventListener('loadstart', function() { start = Date.now(); });
+    xhr.addEventListener('loadend', function() {
+      entry.status = xhr.status;
+      entry.statusText = xhr.statusText;
+      entry.durationMs = Date.now() - start;
+      try {
+        entry.response = xhr.responseText && xhr.responseText.length > 500 ? xhr.responseText.slice(0, 500) + '…' : xhr.responseText;
+      } catch {}
+      pushNetwork(entry);
+    });
+    xhr.addEventListener('error', function() {
+      entry.error = 'Network error';
+      entry.durationMs = Date.now() - start;
+      pushNetwork(entry);
+    });
+    return xhr;
+  }
+  window.XMLHttpRequest = PatchedXHR;
+  // --- END: Console and Network Capture ---
+
   /**
    * Detect current theme
    * @returns {string} - 'light' or 'dark'
