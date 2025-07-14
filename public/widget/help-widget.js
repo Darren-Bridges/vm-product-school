@@ -1585,7 +1585,14 @@
           // Ignore if localStorage cannot be serialized
         }
         // Ensure html2canvas is loaded, then capture screenshot
-        ensureHtml2CanvasLoaded(async () => {
+        ensureHtml2CanvasLoaded(async (err) => {
+          if (err) {
+            elements.content.innerHTML = '<div style="padding:32px;text-align:center;color:red;">Failed to load screenshot tool.</div>';
+            setTimeout(() => {
+              renderContent({ articles: allArticles });
+            }, 2000);
+            return;
+          }
           try {
             const canvas = await window.html2canvas(document.body, {useCORS:true, logging:false, backgroundColor:null});
             const screenshot = canvas.toDataURL('image/png');
@@ -1614,6 +1621,7 @@
                 }, 2000);
               });
           } catch (err) {
+            console.error('Screenshot capture error:', err);
             elements.content.innerHTML = '<div style="padding:32px;text-align:center;color:red;">Failed to capture screenshot.</div>';
             setTimeout(() => {
               renderContent({ articles: allArticles });
@@ -1624,12 +1632,24 @@
     }
   }
 
-  // Utility to load html2canvas if not present
+  // Improved html2canvas loader: handles multiple calls and script load errors
   function ensureHtml2CanvasLoaded(cb) {
     if (window.html2canvas) return cb();
+    if (window._html2canvasLoading) {
+      window._html2canvasLoading.push(cb);
+      return;
+    }
+    window._html2canvasLoading = [cb];
     const script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
-    script.onload = cb;
+    script.onload = function() {
+      window._html2canvasLoading.forEach(fn => fn());
+      window._html2canvasLoading = null;
+    };
+    script.onerror = function() {
+      window._html2canvasLoading.forEach(fn => fn(new Error('Failed to load html2canvas')));
+      window._html2canvasLoading = null;
+    };
     document.head.appendChild(script);
   }
 
