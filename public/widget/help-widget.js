@@ -13,7 +13,7 @@
     position: 'bottom-right',
     theme: 'dark', // FORCE DARK MODE for testing
     apiBaseUrl: (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
-      ? 'http://localhost:3001/api/widget'
+      ? 'http://localhost:3000/api/widget'
       : 'https://vm-product-school.vercel.app/api/widget',
     cacheExpiry: 5 * 60 * 1000, // 5 minutes
   };
@@ -34,6 +34,336 @@
   let allArticlesLoaded = false;
   let allArticlesFetchedAt = 0;
   const ALL_ARTICLES_CACHE_EXPIRY = 10 * 60 * 1000; // 10 minutes
+
+  // Add flows state
+  let allFlows = null;
+  let allFlowsLoaded = false;
+  let allFlowsFetchedAt = 0;
+  const ALL_FLOWS_CACHE_EXPIRY = 10 * 60 * 1000; // 10 minutes
+
+  // --- BEGIN: Question Flow State ---
+  let questionFlowState = {
+    active: false,
+    step: 0,
+    answers: [],
+    history: [],
+  };
+
+  function loadQuestionFlow() {
+    try {
+      const flowStr = localStorage.getItem('webWidgetFlow');
+      if (flowStr) {
+        const flow = JSON.parse(flowStr);
+        // Convert nodes/edges to questionFlow format
+        if (flow.nodes && flow.edges) {
+          // Map nodes by id for easy lookup
+          const nodeMap = {};
+          flow.nodes.forEach(n => { nodeMap[n.id] = n; });
+          // Build questionFlow array
+          return flow.nodes.map(n => {
+            // Find outgoing edges for this node
+            const outgoing = flow.edges.filter(e => e.source === n.id);
+            return {
+              id: n.id,
+              question: n.data && n.data.label ? n.data.label : n.id,
+              options: outgoing.map(e => ({ label: e.label || 'Option', next: e.target })),
+              type: n.type || (n.data && n.data.type) || 'question',
+              articleId: n.data && n.data.articleId ? n.data.articleId : undefined,
+              flowId: n.data && n.data.flowId ? n.data.flowId : undefined,
+              flowSlug: n.data && n.data.flowSlug ? n.data.flowSlug : undefined,
+            };
+          });
+        }
+      }
+    } catch (e) {
+      // Ignore and fallback
+    }
+    return getDefaultQuestionFlow();
+  }
+
+  // Fetch all flows from the API
+  function fetchAllFlows() {
+    const now = Date.now();
+    if (!allFlowsLoaded || (now - allFlowsFetchedAt > ALL_FLOWS_CACHE_EXPIRY)) {
+      return fetch(withRoleParam(`${config.apiBaseUrl}/flows`), {
+        headers: { 'X-API-Key': config.apiKey },
+      })
+        .then(res => res.json())
+        .then(data => {
+          allFlows = data.flows || [];
+          allFlowsLoaded = true;
+          allFlowsFetchedAt = Date.now();
+          return allFlows;
+        })
+        .catch(err => {
+          console.error('HelpWidget: Failed to fetch flows:', err);
+          return [];
+        });
+    }
+    return Promise.resolve(allFlows);
+  }
+
+  // Get default question flow (fallback)
+  function getDefaultQuestionFlow() {
+    return [
+      {
+        id: 'supportType',
+        question: 'What type of support do you need?',
+        options: [
+          { label: 'Technical Issue', next: 'technicalIssue' },
+          { label: 'Feature Request', next: 'featureRequest' },
+          { label: 'Account/Billing', next: 'accountBilling' },
+          { label: 'Other', next: 'ticket' }
+        ],
+        type: 'question'
+      },
+      {
+        id: 'technicalIssue',
+        question: 'What kind of technical issue are you experiencing?',
+        options: [
+          { label: 'App not working', next: 'ticket' },
+          { label: 'Error message', next: 'ticket' },
+          { label: 'Performance issue', next: 'ticket' },
+          { label: 'Other', next: 'ticket' }
+        ],
+        type: 'question'
+      },
+      {
+        id: 'featureRequest',
+        question: 'What feature would you like to request?',
+        options: [
+          { label: 'New functionality', next: 'ticket' },
+          { label: 'UI/UX improvement', next: 'ticket' },
+          { label: 'Integration request', next: 'ticket' },
+          { label: 'Other', next: 'ticket' }
+        ],
+        type: 'question'
+      },
+      {
+        id: 'accountBilling',
+        question: 'What account or billing issue do you have?',
+        options: [
+          { label: 'Payment problem', next: 'ticket' },
+          { label: 'Account access', next: 'ticket' },
+          { label: 'Subscription issue', next: 'ticket' },
+          { label: 'Other', next: 'ticket' }
+        ],
+        type: 'question'
+      }
+    ];
+  }
+
+  // Load the default flow from API
+  function loadDefaultFlow() {
+    return fetchAllFlows().then(flows => {
+      const defaultFlow = flows.find(flow => flow.is_default);
+      if (defaultFlow && defaultFlow.flow_data) {
+        // Convert the flow data to questionFlow format
+        const flow = defaultFlow.flow_data;
+        if (flow.nodes && flow.edges) {
+          // Map nodes by id for easy lookup
+          const nodeMap = {};
+          flow.nodes.forEach(n => { nodeMap[n.id] = n; });
+          // Build questionFlow array
+          return flow.nodes.map(n => {
+            // Find outgoing edges for this node
+            const outgoing = flow.edges.filter(e => e.source === n.id);
+            return {
+              id: n.id,
+              question: n.data && n.data.label ? n.data.label : n.id,
+              options: outgoing.map(e => ({ label: e.label || 'Option', next: e.target })),
+              type: n.type || (n.data && n.data.type) || 'question',
+              articleId: n.data && n.data.articleId ? n.data.articleId : undefined,
+              flowId: n.data && n.data.flowId ? n.data.flowId : undefined,
+              flowSlug: n.data && n.data.flowSlug ? n.data.flowSlug : undefined,
+            };
+          });
+        }
+      }
+      // Fallback to default question flow
+      return getDefaultQuestionFlow();
+    });
+  }
+
+  let questionFlow = loadQuestionFlow();
+
+  function startQuestionFlow() {
+    questionFlowState = {
+      active: true,
+      step: 0,
+      answers: [],
+      history: [],
+    };
+    // Use the first node in the flow as the start
+    const startId = questionFlow.length > 0 ? questionFlow[0].id : 'supportType';
+    renderQuestionFlow(startId);
+  }
+
+  function renderQuestionFlow(currentId) {
+    const q = questionFlow.find(q => q.id === currentId);
+    if (!q) {
+      // Fallback: go to ticket form
+      questionFlowState.active = false;
+      renderSupportForm();
+      return;
+    }
+
+    // --- FLOW NODE AUTO-TRANSITION (MUST BE FIRST) ---
+    if (q.type === 'flow' && q.flowId) {
+      showLoading();
+      fetchAllFlows().then(flows => {
+        const referencedFlow = flows.find(f => f.id === q.flowId);
+        if (referencedFlow && referencedFlow.flow_data) {
+          const flow = referencedFlow.flow_data;
+          if (flow.nodes && flow.edges) {
+            const nodeMap = {};
+            flow.nodes.forEach(n => { nodeMap[n.id] = n; });
+            const newQuestionFlow = flow.nodes.map(n => {
+              const outgoing = flow.edges.filter(e => e.source === n.id);
+              return {
+                id: n.id,
+                question: n.data && n.data.label ? n.data.label : n.id,
+                options: outgoing.map(e => ({ label: e.label || 'Option', next: e.target })),
+                type: n.type || (n.data && n.data.type) || 'question',
+                articleId: n.data && n.data.articleId ? n.data.articleId : undefined,
+                flowId: n.data && n.data.flowId ? n.data.flowId : undefined,
+                flowSlug: n.data && n.data.flowSlug ? n.data.flowSlug : undefined,
+              };
+            });
+            questionFlow = newQuestionFlow;
+            // Reset flow state for the new flow
+            questionFlowState.active = true;
+            questionFlowState.step = 0;
+            questionFlowState.answers = [];
+            questionFlowState.history = [];
+            // Start the referenced flow at its first node
+            if (newQuestionFlow.length > 0) {
+              renderQuestionFlow(newQuestionFlow[0].id);
+            } else {
+              renderSupportForm();
+            }
+          } else {
+            renderSupportForm();
+          }
+        } else {
+          renderSupportForm();
+        }
+      }).catch(err => {
+        console.error('HelpWidget: Failed to load referenced flow:', err);
+        renderSupportForm();
+      });
+      return;
+    }
+    // --- END FLOW NODE AUTO-TRANSITION ---
+
+    // --- TICKET NODE AUTO-TRANSITION ---
+    if (q.type === 'ticket') {
+      // Add the current answer to the flow state
+      if (questionFlowState.answers.length === 0 || questionFlowState.answers[questionFlowState.answers.length - 1].id !== q.id) {
+        questionFlowState.answers.push({ id: q.id, answer: q.question });
+      }
+      questionFlowState.active = false;
+      renderSupportForm();
+      return;
+    }
+    // --- END TICKET NODE AUTO-TRANSITION ---
+
+    questionFlowState.currentId = currentId;
+    let html = `<div class="help-widget__question-flow">
+      <div style="margin-bottom:16px;font-weight:500;">${q.question}</div>
+    `;
+    if (q.info) {
+      html += `<div style='margin-bottom:12px;color:#666;font-size:0.98em;'>${q.info}</div>`;
+    }
+    if (q.link) {
+      html += `<div style='margin-bottom:12px;'><a href='${q.link}' target='_blank' style='color:#8C4FFB;text-decoration:underline;'>Open Guide/Settings</a></div>`;
+    }
+    if (q.options) {
+      html += '<div style="display:flex;flex-direction:column;gap:10px;">';
+      q.options.forEach((opt, idx) => {
+        html += `<button class="help-widget__question-option" data-next="${opt.next}" data-label="${opt.label}" style="padding:10px 12px;background:#8C4FFB;color:#fff;border:none;border-radius:4px;font-size:1rem;font-weight:500;cursor:pointer;">${opt.label}</button>`;
+      });
+      html += '</div>';
+    }
+    if (questionFlowState.answers.length > 0) {
+      html += `<button class="help-widget__question-back" style="margin-top:16px;background:none;border:none;color:#8C4FFB;cursor:pointer;">← Back</button>`;
+    }
+    html += '</div>';
+    elements.content.innerHTML = html;
+    // Back to list
+    const backBtn = elements.content.querySelector('.help-widget__back-to-list');
+    if (backBtn) {
+      backBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        setActiveTab('help');
+        state.viewMode = 'list';
+        state.currentArticle = null;
+        questionFlowState.active = false;
+      });
+    }
+    // Option buttons
+    const optionBtns = elements.content.querySelectorAll('.help-widget__question-option');
+    optionBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const label = btn.getAttribute('data-label');
+        const next = btn.getAttribute('data-next');
+        questionFlowState.history.push(currentId);
+        questionFlowState.answers.push({ id: currentId, answer: label });
+        if (next === 'ticket') {
+          questionFlowState.active = false;
+          renderSupportForm();
+        } else {
+          renderQuestionFlow(next);
+        }
+      });
+    });
+    // Back button in flow
+    const flowBackBtn = elements.content.querySelector('.help-widget__question-back');
+    if (flowBackBtn) {
+      flowBackBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (questionFlowState.answers.length > 0) {
+          const prev = questionFlowState.history.pop();
+          questionFlowState.answers.pop();
+          renderQuestionFlow(prev || 'supportType');
+        }
+      });
+    }
+
+    // --- ARTICLE NODE HANDLING (robust) ---
+    if (q.type === 'article' && q.articleId) {
+      console.log('HelpWidget: Article node reached', q);
+      // Try to find the article in allArticles
+      if (allArticlesLoaded && allArticles) {
+        const article = allArticles.find(a => a.id === q.articleId);
+        if (article) {
+          renderArticleContent(article);
+          // ...feedback, etc...
+          return;
+        }
+      }
+      // Fallback: fetch the article directly from the API
+      elements.content.innerHTML = '<div class="help-widget__loading">Loading article…</div>';
+      fetch(`${config.apiBaseUrl}/article/${q.articleId}`, {
+        headers: { 'X-API-Key': config.apiKey },
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data && data.article) {
+            renderArticleContent(data.article);
+          } else {
+            elements.content.innerHTML = '<div class="help-widget__error">Article not found.</div>';
+          }
+        })
+        .catch(error => {
+          console.error('HelpWidget: Failed to fetch article', error);
+          elements.content.innerHTML = '<div class="help-widget__error">Failed to load article.</div>';
+        });
+      return;
+    }
+    // --- END ARTICLE NODE HANDLING ---
+  }
+  // --- END: Question Flow State ---
 
   // DOM elements
   let elements = {
@@ -326,7 +656,30 @@
         fetchAllArticlesAndShowList();
       }
     } else if (tab === 'support') {
-      renderSupportForm();
+      // Load the default flow from API when opening support tab
+      showLoading();
+      loadDefaultFlow().then(flow => {
+        questionFlow = flow;
+        // Show question flow first
+        if (!questionFlowState.active && questionFlowState.answers.length === 0) {
+          startQuestionFlow();
+        } else if (questionFlowState.active) {
+          renderQuestionFlow(questionFlowState.currentId || 'supportType');
+        } else {
+          renderSupportForm();
+        }
+      }).catch(err => {
+        console.error('HelpWidget: Failed to load default flow:', err);
+        // Fallback to default question flow
+        questionFlow = loadQuestionFlow();
+        if (!questionFlowState.active && questionFlowState.answers.length === 0) {
+          startQuestionFlow();
+        } else if (questionFlowState.active) {
+          renderQuestionFlow(questionFlowState.currentId || 'supportType');
+        } else {
+          renderSupportForm();
+        }
+      });
     }
   }
 
@@ -1499,6 +1852,15 @@
     let videoFileReadyPromise = null;
     let videoFileReadyResolve = null;
     let screenStream = null;
+    // --- BEGIN: Add question flow summary ---
+    let questionSummary = '';
+    if (questionFlowState.answers && questionFlowState.answers.length > 0) {
+      questionSummary = '---\nSupport Flow Answers:\n' + questionFlowState.answers.map(a => {
+        const q = questionFlow.find(q => q.id === a.id);
+        return (q ? q.question : a.id) + ': ' + a.answer;
+      }).join('\n') + '\n---\n';
+    }
+    // --- END: Add question flow summary ---
     elements.content.innerHTML = `
       <div class="help-widget__support-form">
         <button class="help-widget__back-to-list" type="button">← Back to Help Centre</button>
@@ -1506,7 +1868,7 @@
         <form id="supportTicketForm">
           <label style="display:block;margin-bottom:6px;">Name <input name="name" type="text" required style="width:100%;margin-bottom:12px;padding:8px;border-radius:4px;border:1px solid #ccc;"></label>
           <label style="display:block;margin-bottom:6px;">Email <input name="email" type="email" value="${email}" required style="width:100%;margin-bottom:12px;padding:8px;border-radius:4px;border:1px solid #ccc;" readonly></label>
-          <label style="display:block;margin-bottom:6px;">Message <textarea name="message" required rows="4" style="width:100%;margin-bottom:12px;padding:8px;border-radius:4px;border:1px solid #ccc;"></textarea></label>
+          <label style="display:block;margin-bottom:6px;">Message <textarea name="message" required rows="4" style="width:100%;margin-bottom:12px;padding:8px;border-radius:4px;border:1px solid #ccc;">${questionSummary}</textarea></label>
           <label style="display:block;margin-bottom:12px;">File Upload <input name="file" type="file" style="display:block;margin-top:4px;"></label>
           <div style="margin-bottom:12px;">
             <button type="button" id="recordScreenBtn" style="padding:8px 12px;background:#8C4FFB;color:#fff;border:none;border-radius:4px;font-size:1rem;font-weight:600;cursor:pointer;">Record Screen</button>
@@ -1634,7 +1996,7 @@
         const formData = new FormData(form);
         const name = formData.get('name');
         const email = formData.get('email');
-        const message = formData.get('message');
+        let message = formData.get('message');
         const file = formData.get('file');
         let fileInfo = null;
         if (file && file.size > 0) {
@@ -1664,6 +2026,33 @@
         } catch (err) {
           // Ignore if localStorage cannot be serialized
         }
+        // --- BEGIN: Append errors to message ---
+        // Extract console errors
+        const consoleErrors = capturedConsole
+          .filter(entry => entry.type === 'error')
+          .map(entry => `[${entry.ts}] ${entry.args.join(' ')}`);
+        // Extract network errors (status >= 400 or error property)
+        const networkErrors = capturedNetwork
+          .filter(entry => (entry.status && entry.status >= 400) || entry.error)
+          .map(entry => {
+            let msg = `[${entry.ts}] ${entry.type.toUpperCase()} ${entry.url || ''}`;
+            if (entry.status) msg += ` (Status: ${entry.status} ${entry.statusText || ''})`;
+            if (entry.error) msg += ` Error: ${entry.error}`;
+            return msg;
+          });
+        let errorSummary = '';
+        if (consoleErrors.length || networkErrors.length) {
+          errorSummary = '\n\n---\nRecent Errors Detected:\n';
+          if (consoleErrors.length) {
+            errorSummary += '\nConsole Errors:\n' + consoleErrors.join('\n');
+          }
+          if (networkErrors.length) {
+            errorSummary += '\nNetwork Errors:\n' + networkErrors.join('\n');
+          }
+        }
+        // Append to message
+        const messageWithErrors = message + errorSummary;
+        // --- END: Append errors to message ---
         // Ensure html2canvas is loaded, then capture screenshot
         ensureHtml2CanvasLoaded(async (err) => {
           if (err) {
@@ -1676,7 +2065,7 @@
           try {
             const canvas = await window.html2canvas(document.body, {useCORS:true, logging:false, backgroundColor:null});
             const screenshot = canvas.toDataURL('image/png');
-            const ticket = { name, email, message, file: fileInfo, screenshot, console: capturedConsole.slice(-50), network: capturedNetwork.slice(-20), video: videoAttachment, localStorage: localStorageAttachment };
+            const ticket = { name, email, message: messageWithErrors, file: fileInfo, screenshot, console: capturedConsole.slice(-50), network: capturedNetwork.slice(-20), video: videoAttachment, localStorage: localStorageAttachment };
             // Submit to backend
             fetch('/api/widget/support-ticket', {
               method: 'POST',

@@ -18,6 +18,7 @@ const navigation = [
   { name: "Product Tours", href: "/admin/tours", icon: <PlayCircle className="w-4 h-4" /> },
   { name: "Theming", href: "/admin/theme", icon: <Palette className="w-4 h-4" /> },
   { name: "Notifications", href: "/admin/notifications", icon: <Bell className="w-4 h-4" /> },
+  { name: "Web Widget", href: "/admin/web-widget", icon: <Settings className="w-4 h-4" /> },
   { name: "Widget Demo", href: "/widget-demo", icon: <PlayCircle className="w-4 h-4" /> },
 ];
 
