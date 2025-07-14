@@ -400,7 +400,7 @@ export default function WebWidgetFlowEditorPage() {
         <div className="flex gap-2 mb-4">
           <Button variant="outline" onClick={() => handleAddNode('question')}>Add Question</Button>
           <Button variant="outline" onClick={() => handleAddNode('article')}>Add Article</Button>
-          <Button variant="outline" onClick={() => handleAddNode('ticket')}>Add Ticket</Button>
+          <Button variant="outline" onClick={() => handleAddNode('ticket')}>Add ticket form</Button>
           <Button variant="outline" onClick={() => handleAddNode('flow')}>Add Flow</Button>
         </div>
         <div style={{ width: '100%', height: 600, background: '#f8fafc', borderRadius: 8, border: '1px solid #e5e7eb' }}>
