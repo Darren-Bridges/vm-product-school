@@ -23,13 +23,24 @@ interface Article {
   categories?: Category[];
 }
 
-export async function GET(request: NextRequest) {
-  if (!validateApiKey(request)) {
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET,OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, X-API-Key',
+    },
+  });
+}
+
+export async function GET(req: NextRequest) {
+  if (!validateApiKey(req)) {
     return NextResponse.json({ error: 'Invalid API key' }, { status: 401 });
   }
 
   // Get role from query param
-  const { searchParams } = new URL(request.url);
+  const { searchParams } = new URL(req.url);
   const role = searchParams.get('role');
   let allowedAccess;
   if (role === 'superadmin') {
@@ -77,5 +88,9 @@ export async function GET(request: NextRequest) {
     path: article.path,
   }));
 
-  return NextResponse.json({ articles: processed });
+  const res = NextResponse.json({ articles: processed });
+  res.headers.set('Access-Control-Allow-Origin', '*');
+  res.headers.set('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.headers.set('Access-Control-Allow-Headers', 'Content-Type, X-API-Key');
+  return res;
 } 
