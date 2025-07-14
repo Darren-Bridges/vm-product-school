@@ -1624,6 +1624,15 @@
     }
   }
 
+  // Utility to load html2canvas if not present
+  function ensureHtml2CanvasLoaded(cb) {
+    if (window.html2canvas) return cb();
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+    script.onload = cb;
+    document.head.appendChild(script);
+  }
+
   // Public API
   window.HelpWidget = {
     init,
