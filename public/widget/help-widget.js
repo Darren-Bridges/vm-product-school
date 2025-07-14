@@ -24,6 +24,7 @@
     cachedContent: new Map(),
     currentArticle: null,
     viewMode: 'list', // 'list' or 'article'
+    activeTab: 'help', // 'help' or 'support'
   };
 
   // Add to state
@@ -174,6 +175,10 @@
           <span class="help-widget__brand-subtitle">Help Centre</span>
         </div>
       </div>
+      <div class="help-widget__tabs" style="display:flex;gap:0;">
+        <button class="help-widget__tab" data-tab="help" style="flex:1;padding:10px 0;border:none;background:none;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;">Help Centre</button>
+        <button class="help-widget__tab" data-tab="support" style="flex:1;padding:10px 0;border:none;background:none;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;">Get Support</button>
+      </div>
       <div class="help-widget__search">
         <input type="text" placeholder="Search help articles..." class="help-widget__search-input">
       </div>
@@ -203,6 +208,46 @@
     // Append elements
     elements.container.appendChild(elements.button);
     elements.container.appendChild(elements.sidebar);
+
+    // Add tab switching logic
+    const tabButtons = elements.sidebar.querySelectorAll('.help-widget__tab');
+    tabButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const tab = btn.getAttribute('data-tab');
+        setActiveTab(tab);
+      });
+    });
+  }
+
+  function setActiveTab(tab) {
+    state.activeTab = tab;
+    // Update tab UI
+    const tabButtons = elements.sidebar.querySelectorAll('.help-widget__tab');
+    tabButtons.forEach(btn => {
+      if (btn.getAttribute('data-tab') === tab) {
+        btn.style.borderBottomColor = '#8C4FFB';
+        btn.style.color = '#8C4FFB';
+      } else {
+        btn.style.borderBottomColor = 'transparent';
+        btn.style.color = '';
+      }
+    });
+    // Show/hide search bar
+    if (elements.search) {
+      elements.search.parentElement.style.display = (tab === 'help') ? '' : 'none';
+    }
+    // Render content for the tab
+    if (tab === 'help') {
+      // Show articles/search UI
+      if (allArticlesLoaded && allArticles) {
+        renderContent({ articles: allArticles });
+      } else {
+        showLoading();
+        fetchAllArticlesAndShowList();
+      }
+    } else if (tab === 'support') {
+      renderSupportForm();
+    }
   }
 
   /**
@@ -273,51 +318,40 @@
     }
   }
 
-  /**
-   * Open sidebar
-   */
+  // Move fetchAllArticlesAndShowList to top-level so it can be called from setActiveTab and openSidebar
+  function fetchAllArticlesAndShowList() {
+    const now = Date.now();
+    if (!allArticlesLoaded || (now - allArticlesFetchedAt > ALL_ARTICLES_CACHE_EXPIRY)) {
+      showLoading();
+      fetch(withRoleParam(`${config.apiBaseUrl}/all-articles`), {
+        headers: { 'X-API-Key': config.apiKey },
+      })
+        .then(res => res.json())
+        .then(data => {
+          allArticles = data.articles || [];
+          allArticlesLoaded = true;
+          allArticlesFetchedAt = Date.now();
+          if (state.activeTab === 'help') {
+            renderContent({ articles: allArticles });
+          }
+        })
+        .catch(err => {
+          showError('Failed to load articles');
+        });
+      return;
+    }
+    if (state.activeTab === 'help') {
+      renderContent({ articles: allArticles });
+    }
+  }
+
+  // Patch openSidebar to default to Help Centre tab
   function openSidebar() {
     state.isOpen = true;
     elements.container.classList.add('help-widget--open');
+    setActiveTab('help');
     elements.search.focus();
-    const now = Date.now();
-    // Always fetch all articles and then check for a path match
     fetchAllArticlesAndShowList();
-    function fetchAllArticlesAndShowList() {
-      if (!allArticlesLoaded || (now - allArticlesFetchedAt > ALL_ARTICLES_CACHE_EXPIRY)) {
-        showLoading();
-        fetch(withRoleParam(`${config.apiBaseUrl}/all-articles`), {
-          headers: { 'X-API-Key': config.apiKey },
-        })
-          .then(res => res.json())
-          .then(data => {
-            allArticles = data.articles || [];
-            allArticlesLoaded = true;
-            allArticlesFetchedAt = Date.now();
-            maybeShowDefaultArticleOrList();
-          })
-          .catch(err => {
-            showError('Failed to load articles');
-          });
-        return;
-      }
-      // Always check for a path match, even if articles are already loaded
-      maybeShowDefaultArticleOrList();
-    }
-    function maybeShowDefaultArticleOrList() {
-      if (config.path && allArticles && allArticles.length > 0) {
-        const match = allArticles.find(a => a.path === config.path);
-        if (match) {
-          renderArticleContent(match);
-          state.currentArticle = match;
-          state.viewMode = 'article';
-          return;
-        }
-      }
-      renderContent({ articles: allArticles });
-      state.currentArticle = null;
-      state.viewMode = 'list';
-    }
   }
 
   /**
@@ -579,7 +613,7 @@
   function renderArticleContent(article) {
     const html = `
       <div class="help-widget__article-view">
-        <button class="help-widget__back-to-list" type="button">← Back to Help Center</button>
+        <button class="help-widget__back-to-list" type="button">← Back to Help Centre</button>
         <h2 class="help-widget__article-title">${article.title}</h2>
         <div class="help-widget__article-meta">
           <span class="help-widget__article-date">${new Date(article.created_at).toLocaleDateString()}</span>
@@ -1361,6 +1395,233 @@
       return url + (url.includes('?') ? '&' : '?') + 'role=' + encodeURIComponent(config.userRole);
     }
     return url;
+  }
+
+  /**
+   * --- SUPPORT TICKET UI & LOGIC ---
+   */
+
+  // Remove addSupportButton and related calls
+  // Remove patching of renderContent to add the support button
+  // Remove any references to addSupportButton in renderSupportForm, goBackToList, etc.
+
+  // Render the support ticket form
+  function renderSupportForm() {
+    // Try to get email from localStorage auth_user
+    let email = '';
+    try {
+      const user = JSON.parse(localStorage.getItem('auth_user'));
+      if (user && user.email) email = user.email;
+    } catch {}
+    let recordedVideoBlob = null;
+    let recordedVideoUrl = null;
+    let videoFileInfo = null;
+    let videoFileReadyPromise = null;
+    let videoFileReadyResolve = null;
+    let screenStream = null;
+    elements.content.innerHTML = `
+      <div class="help-widget__support-form">
+        <button class="help-widget__back-to-list" type="button">← Back to Help Centre</button>
+        <h2 style="margin-bottom: 12px;">Contact Support</h2>
+        <form id="supportTicketForm">
+          <label style="display:block;margin-bottom:6px;">Name <input name="name" type="text" required style="width:100%;margin-bottom:12px;padding:8px;border-radius:4px;border:1px solid #ccc;"></label>
+          <label style="display:block;margin-bottom:6px;">Email <input name="email" type="email" value="${email}" required style="width:100%;margin-bottom:12px;padding:8px;border-radius:4px;border:1px solid #ccc;" readonly></label>
+          <label style="display:block;margin-bottom:6px;">Message <textarea name="message" required rows="4" style="width:100%;margin-bottom:12px;padding:8px;border-radius:4px;border:1px solid #ccc;"></textarea></label>
+          <label style="display:block;margin-bottom:12px;">File Upload <input name="file" type="file" style="display:block;margin-top:4px;"></label>
+          <div style="margin-bottom:12px;">
+            <button type="button" id="recordScreenBtn" style="padding:8px 12px;background:#8C4FFB;color:#fff;border:none;border-radius:4px;font-size:1rem;font-weight:600;cursor:pointer;">Record Screen</button>
+            <span id="recordingStatus" style="margin-left:8px;color:#8C4FFB;"></span>
+            <div id="videoPreviewContainer" style="margin-top:8px;"></div>
+          </div>
+          <button type="submit" style="width:100%;padding:10px;background:#8C4FFB;color:#fff;border:none;border-radius:4px;font-size:1rem;font-weight:600;">Submit Ticket</button>
+        </form>
+      </div>
+    `;
+    // Add back button handler
+    const backBtn = elements.content.querySelector('.help-widget__back-to-list');
+    if (backBtn) {
+      backBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        setActiveTab('help');
+        state.viewMode = 'list';
+        state.currentArticle = null;
+      });
+    }
+    // Screen recording logic
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    const recordBtn = elements.content.querySelector('#recordScreenBtn');
+    const recordingStatus = elements.content.querySelector('#recordingStatus');
+    const videoPreviewContainer = elements.content.querySelector('#videoPreviewContainer');
+    if (recordBtn) {
+      recordBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+          mediaRecorder.stop();
+          if (screenStream) {
+            screenStream.getTracks().forEach(track => track.stop());
+            screenStream = null;
+          }
+          if (window.micStream) {
+            window.micStream.getTracks().forEach(track => track.stop());
+            window.micStream = null;
+          }
+          return;
+        }
+        try {
+          screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+          let micStream = null;
+          try {
+            micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            window.micStream = micStream;
+          } catch (e) {
+            window.micStream = null;
+            // User denied mic or no mic available
+          }
+          let tracks = [...screenStream.getVideoTracks()];
+          if (screenStream.getAudioTracks().length > 0) {
+            tracks = tracks.concat(screenStream.getAudioTracks());
+          }
+          if (micStream && micStream.getAudioTracks().length > 0) {
+            tracks = tracks.concat(micStream.getAudioTracks());
+          }
+          const combinedStream = new MediaStream(tracks);
+          recordedChunks = [];
+          mediaRecorder = new window.MediaRecorder(combinedStream, { mimeType: 'video/webm' });
+
+          mediaRecorder.ondataavailable = function(event) {
+            if (event.data.size > 0) recordedChunks.push(event.data);
+          };
+
+          mediaRecorder.onstop = function() {
+            recordedVideoBlob = new Blob(recordedChunks, { type: 'video/webm' });
+            recordedVideoUrl = URL.createObjectURL(recordedVideoBlob);
+            // Show preview (keep visible until removed)
+            videoPreviewContainer.innerHTML = `
+              <video src="${recordedVideoUrl}" controls style="max-width:100%;margin-top:8px;"></video>
+              <br>
+              <button type='button' id='removeRecordingBtn' style='margin-top:4px;padding:4px 8px;'>Remove Recording</button>
+            `;
+            // Prepare file info for upload
+            videoFileReadyPromise = new Promise((resolve) => { videoFileReadyResolve = resolve; });
+            const reader = new FileReader();
+            reader.onload = function() {
+              videoFileInfo = {
+                name: 'screen-recording.webm',
+                size: recordedVideoBlob.size,
+                type: 'video/webm',
+                base64: reader.result
+              };
+              if (videoFileReadyResolve) videoFileReadyResolve();
+            };
+            reader.readAsDataURL(recordedVideoBlob);
+            // Remove/re-record logic
+            setTimeout(() => {
+              const removeBtn = elements.content.querySelector('#removeRecordingBtn');
+              if (removeBtn) {
+                removeBtn.addEventListener('click', function() {
+                  recordedVideoBlob = null;
+                  recordedVideoUrl = null;
+                  videoFileInfo = null;
+                  videoFileReadyPromise = null;
+                  videoFileReadyResolve = null;
+                  videoPreviewContainer.innerHTML = '';
+                });
+              }
+            }, 100);
+            recordingStatus.textContent = '';
+            recordBtn.textContent = 'Record Screen';
+          };
+
+          mediaRecorder.start();
+          recordingStatus.textContent = 'Recording... Click again to stop.';
+          recordBtn.textContent = 'Stop Recording';
+        } catch (err) {
+          recordingStatus.textContent = 'Screen recording failed.';
+        }
+      });
+    }
+    // Add form submit handler
+    const form = elements.content.querySelector('#supportTicketForm');
+    if (form) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        // Wait for video file to be ready if recording exists
+        if (videoFileReadyPromise) {
+          await videoFileReadyPromise;
+        }
+        elements.content.innerHTML = '<div style="padding:32px;text-align:center;">Capturing screenshot...</div>';
+        const formData = new FormData(form);
+        const name = formData.get('name');
+        const email = formData.get('email');
+        const message = formData.get('message');
+        const file = formData.get('file');
+        let fileInfo = null;
+        if (file && file.size > 0) {
+          // Read file as base64 (for demo)
+          fileInfo = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve({ name: file.name, size: file.size, type: file.type, base64: reader.result });
+            reader.readAsDataURL(file);
+          });
+        }
+        // Wait for videoFileInfo if recording was done
+        let videoAttachment = null;
+        if (videoFileInfo) {
+          videoAttachment = videoFileInfo;
+        }
+        // Add localStorage as a text file attachment
+        let localStorageAttachment = null;
+        try {
+          const localStorageData = JSON.stringify({ ...localStorage }, null, 2);
+          const localStorageBase64 = btoa(unescape(encodeURIComponent(localStorageData)));
+          localStorageAttachment = {
+            name: 'local-storage.txt',
+            size: localStorageBase64.length,
+            type: 'text/plain',
+            base64: 'data:text/plain;base64,' + localStorageBase64
+          };
+        } catch (err) {
+          // Ignore if localStorage cannot be serialized
+        }
+        // Ensure html2canvas is loaded, then capture screenshot
+        ensureHtml2CanvasLoaded(async () => {
+          try {
+            const canvas = await window.html2canvas(document.body, {useCORS:true, logging:false, backgroundColor:null});
+            const screenshot = canvas.toDataURL('image/png');
+            const ticket = { name, email, message, file: fileInfo, screenshot, console: capturedConsole.slice(-50), network: capturedNetwork.slice(-20), video: videoAttachment, localStorage: localStorageAttachment };
+            // Submit to backend
+            fetch('/api/widget/support-ticket', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(ticket)
+            })
+              .then(res => res.json())
+              .then(data => {
+                if (data.ticket) {
+                  elements.content.innerHTML = '<div style="padding:32px;text-align:center;">Thank you! Your support ticket has been submitted.</div>';
+                } else {
+                  elements.content.innerHTML = '<div style="padding:32px;text-align:center;color:red;">Failed to submit ticket.</div>';
+                }
+                setTimeout(() => {
+                  renderContent({ articles: allArticles });
+                }, 2000);
+              })
+              .catch(err => {
+                elements.content.innerHTML = '<div style="padding:32px;text-align:center;color:red;">Failed to submit ticket.</div>';
+                setTimeout(() => {
+                  renderContent({ articles: allArticles });
+                }, 2000);
+              });
+          } catch (err) {
+            elements.content.innerHTML = '<div style="padding:32px;text-align:center;color:red;">Failed to capture screenshot.</div>';
+            setTimeout(() => {
+              renderContent({ articles: allArticles });
+            }, 2000);
+          }
+        });
+      });
+    }
   }
 
   // Public API

@@ -63,11 +63,24 @@ export default function WidgetDemoPage() {
     console.log('WidgetDemo: window.HelpWidget exists:', !!window.HelpWidget);
     if (window.HelpWidget) {
       console.log('WidgetDemo: Calling HelpWidget.init...');
+      let userRole = undefined;
+      try {
+        const storedUser = localStorage.getItem('auth_user');
+        if (storedUser) {
+          const user = JSON.parse(storedUser);
+          if (user && user.role && user.role.slug) {
+            userRole = user.role.slug;
+          }
+        }
+      } catch {
+        // Ignore if user not found or parse error
+      }
       window.HelpWidget.init({
         apiKey: 'test-api-key-123',
         appId: 'demo',
         position: 'bottom-right',
         theme: 'auto',
+        ...(userRole ? { userRole } : {}),
       });
     } else {
       console.error('WidgetDemo: HelpWidget not found on window object');
