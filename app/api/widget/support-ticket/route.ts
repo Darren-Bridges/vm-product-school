@@ -52,6 +52,7 @@ interface ZendeskTicketPayload {
 
 export async function POST(req: NextRequest) {
   // Proxy to production if on localhost:4200
+  // TODO: remove this once we have a proper staging environment
   const referer = req.headers.get('referer') || '';
   if (referer.includes('localhost:4200')) {
     const prodRes = await fetch('https://vm-product-school.vercel.app/api/widget/support-ticket', {
