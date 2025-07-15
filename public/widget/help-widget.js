@@ -2186,7 +2186,7 @@
         <h2 style="margin-bottom: 12px;">Contact Support</h2>
         <form id="supportTicketForm">
           <label style="display:block;margin-bottom:6px;">Name <input name="name" type="text" required style="width:100%;margin-bottom:12px;padding:8px;border-radius:4px;border:1px solid #ccc;"></label>
-          <label style="display:block;margin-bottom:6px;">Email <input name="email" type="email" value="${email}" required style="width:100%;margin-bottom:12px;padding:8px;border-radius:4px;border:1px solid #ccc;" readonly></label>
+          <label style="display:block;margin-bottom:6px;">Email <input name="email" type="email" value="${email}" required style="width:100%;margin-bottom:12px;padding:8px;border-radius:4px;border:1px solid #ccc;"></label>
           <label style="display:block;margin-bottom:6px;">Message <textarea name="message" required rows="4" style="width:100%;margin-bottom:12px;padding:8px;border-radius:4px;border:1px solid #ccc;">${questionSummary}</textarea></label>
           <label style="display:block;margin-bottom:12px;">File Upload <input name="file" type="file" style="display:block;margin-top:4px;"></label>
           <div style="margin-bottom:12px;">
