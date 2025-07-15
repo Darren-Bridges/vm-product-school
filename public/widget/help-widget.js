@@ -901,7 +901,7 @@
           allArticlesLoaded = true;
           allArticlesFetchedAt = Date.now();
           if (state.activeTab === 'help') {
-            renderContent({ articles: allArticles });
+            maybeShowDefaultArticleOrList();
           }
         })
         .catch(err => {
