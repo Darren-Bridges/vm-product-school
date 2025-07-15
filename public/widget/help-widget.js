@@ -12,7 +12,10 @@
     appId: null,
     position: 'bottom-right',
     theme: 'dark', // FORCE DARK MODE for testing
-    apiBaseUrl: (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+    apiBaseUrl: (typeof window !== 'undefined' && (
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1') &&
+      window.location.port !== '4200')
       ? 'http://localhost:3000/api/widget'
       : 'https://vm-product-school.vercel.app/api/widget',
     cacheExpiry: 5 * 60 * 1000, // 5 minutes
