@@ -9,10 +9,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'API key required' }, { status: 401 });
     }
 
-    // Fetch all flows from the database
+    // Fetch all flows from the database, prioritizing the default flow
     const { data: flows, error } = await supabase
       .from('web_widget_flows')
       .select('id, name, slug, flow_data, is_default, updated_at')
+      .order('is_default', { ascending: false })
       .order('updated_at', { ascending: false });
 
     if (error) {

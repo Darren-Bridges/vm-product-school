@@ -39,7 +39,7 @@
   let allFlows = null;
   let allFlowsLoaded = false;
   let allFlowsFetchedAt = 0;
-  const ALL_FLOWS_CACHE_EXPIRY = 10 * 60 * 1000; // 10 minutes
+  const ALL_FLOWS_CACHE_EXPIRY = 1 * 1000; // 1 second (temporarily reduced to force refresh)
 
   // --- BEGIN: Question Flow State ---
   let questionFlowState = {
@@ -156,7 +156,9 @@
   // Load the default flow from API
   function loadDefaultFlow() {
     return fetchAllFlows().then(flows => {
+      console.log('HelpWidget: All flows loaded:', flows.map(f => ({ name: f.name, is_default: f.is_default })));
       const defaultFlow = flows.find(flow => flow.is_default);
+      console.log('HelpWidget: Default flow found:', defaultFlow ? defaultFlow.name : 'none');
       if (defaultFlow && defaultFlow.flow_data) {
         // Convert the flow data to questionFlow format
         const flow = defaultFlow.flow_data;
@@ -185,17 +187,51 @@
     });
   }
 
-  let questionFlow = loadQuestionFlow();
+  let questionFlow = getDefaultQuestionFlow(); // Initialize with fallback first
+
+  // Clear any cached flow data from localStorage
+  try {
+    localStorage.removeItem('webWidgetFlow');
+  } catch (e) {
+    // Ignore localStorage errors
+  }
+
+  // Load the actual default flow from API
+  loadDefaultFlow().then(flow => {
+    console.log('HelpWidget: Default flow loaded, replacing fallback with:', flow.length, 'nodes');
+    questionFlow = flow;
+  });
 
   function startQuestionFlow() {
+    console.log('HelpWidget: Starting question flow with:', questionFlow.length, 'nodes');
+    console.log('HelpWidget: First node:', questionFlow[0]);
+    
+    // Find the starting node (one with no incoming edges)
+    const nodeIds = questionFlow.map(n => n.id);
+    const hasIncomingEdges = new Set();
+    
+    // Check which nodes have incoming edges
+    questionFlow.forEach(node => {
+      node.options.forEach(option => {
+        if (option.next && option.next !== 'ticket') {
+          hasIncomingEdges.add(option.next);
+        }
+      });
+    });
+    
+    // Find nodes with no incoming edges
+    const startNodes = questionFlow.filter(node => !hasIncomingEdges.has(node.id));
+    const startId = startNodes.length > 0 ? startNodes[0].id : (questionFlow.length > 0 ? questionFlow[0].id : 'supportType');
+    
+    console.log('HelpWidget: Starting nodes found:', startNodes.map(n => n.question));
+    console.log('HelpWidget: Starting with node ID:', startId);
+    
     questionFlowState = {
       active: true,
       step: 0,
       answers: [],
       history: [],
     };
-    // Use the first node in the flow as the start
-    const startId = questionFlow.length > 0 ? questionFlow[0].id : 'supportType';
     renderQuestionFlow(startId);
   }
 
@@ -656,30 +692,16 @@
         fetchAllArticlesAndShowList();
       }
     } else if (tab === 'support') {
-      // Load the default flow from API when opening support tab
-      showLoading();
-      loadDefaultFlow().then(flow => {
-        questionFlow = flow;
-        // Show question flow first
-        if (!questionFlowState.active && questionFlowState.answers.length === 0) {
-          startQuestionFlow();
-        } else if (questionFlowState.active) {
-          renderQuestionFlow(questionFlowState.currentId || 'supportType');
-        } else {
-          renderSupportForm();
-        }
-      }).catch(err => {
-        console.error('HelpWidget: Failed to load default flow:', err);
-        // Fallback to default question flow
-        questionFlow = loadQuestionFlow();
-        if (!questionFlowState.active && questionFlowState.answers.length === 0) {
-          startQuestionFlow();
-        } else if (questionFlowState.active) {
-          renderQuestionFlow(questionFlowState.currentId || 'supportType');
-        } else {
-          renderSupportForm();
-        }
-      });
+      // Use the already loaded flow instead of loading it again
+      console.log('HelpWidget: Support tab clicked, using existing flow with', questionFlow.length, 'nodes');
+      // Show question flow first
+      if (!questionFlowState.active && questionFlowState.answers.length === 0) {
+        startQuestionFlow();
+      } else if (questionFlowState.active) {
+        renderQuestionFlow(questionFlowState.currentId || 'supportType');
+      } else {
+        renderSupportForm();
+      }
     }
   }
 
