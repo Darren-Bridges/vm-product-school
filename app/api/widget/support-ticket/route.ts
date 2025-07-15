@@ -4,6 +4,16 @@ const ZENDESK_DOMAIN = 'vm-testing.zendesk.com';
 const ZENDESK_EMAIL = process.env.ZENDESK_EMAIL; // e.g. 'your-email@domain.com/token'
 const ZENDESK_TOKEN = process.env.ZENDESK_TOKEN; // API token only, do not hardcode
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST,OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, X-API-Key',
+};
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 async function uploadAttachment(base64: string, filename: string, type: string): Promise<string> {
   // Remove data URL prefix if present
   const base64Data = base64.split(',')[1];
@@ -41,6 +51,20 @@ interface ZendeskTicketPayload {
 }
 
 export async function POST(req: NextRequest) {
+  // Proxy to production if on localhost:4200
+  const referer = req.headers.get('referer') || '';
+  if (referer.includes('localhost:4200')) {
+    const prodRes = await fetch('https://vm-product-school.vercel.app/api/widget/support-ticket', {
+      method: 'POST',
+      headers: {
+        'Content-Type': req.headers.get('content-type') || 'application/json',
+        'X-API-Key': req.headers.get('x-api-key') || '',
+      },
+      body: req.body,
+    });
+    const data = await prodRes.json();
+    return NextResponse.json(data, { status: prodRes.status, headers: corsHeaders });
+  }
   try {
     const body = await req.json();
     const { name, email, message, file, screenshot, console: logs, network, video, localStorage: localStorageAttachment, priority } = body;
@@ -133,12 +157,12 @@ export async function POST(req: NextRequest) {
     });
     if (!resZendesk.ok) {
       const error = await resZendesk.text();
-      return NextResponse.json({ error }, { status: 500 });
+      return NextResponse.json({ error }, { status: 500, headers: corsHeaders });
     }
     const data = await resZendesk.json();
-    return NextResponse.json({ ticket: data.ticket });
+    return NextResponse.json({ ticket: data.ticket }, { headers: corsHeaders });
   } catch (err: unknown) {
     console.error('Support ticket error:', err);
-    return NextResponse.json({ error: err instanceof Error ? err.message : 'Unknown error' }, { status: 500 });
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Unknown error' }, { status: 500, headers: corsHeaders });
   }
 } 
