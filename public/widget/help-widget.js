@@ -766,7 +766,7 @@
     if (tab === 'help') {
       // Show articles/search UI
       if (allArticlesLoaded && allArticles) {
-        renderContent({ articles: allArticles });
+        maybeShowDefaultArticleOrList();
       } else {
         showLoading();
         fetchAllArticlesAndShowList();
@@ -2538,4 +2538,20 @@
   let defaultFlowStartNodeId = null;
   // Add at the top-level:
   let currentTicketNodeId = null;
+
+  function maybeShowDefaultArticleOrList() {
+    // Use config.path if set, otherwise use window.location.pathname
+    const currentPath = config.path || (typeof window !== 'undefined' ? window.location.pathname : null);
+    if (!currentPath || !allArticles || allArticles.length === 0) {
+      renderContent({ articles: allArticles });
+      return;
+    }
+    // Find the first article with an exact path match
+    const match = allArticles.find(article => article.path && article.path === currentPath);
+    if (match) {
+      loadArticleContent(match.id);
+    } else {
+      renderContent({ articles: allArticles });
+    }
+  }
 })(); 
