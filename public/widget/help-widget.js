@@ -861,16 +861,50 @@
         fetchAllArticlesAndShowList();
       }
     } else if (tab === 'support') {
+      // If flows are not loaded, load them now
+      if (!defaultQuestionFlow || defaultQuestionFlow === getDefaultQuestionFlow()) {
+        showLoading();
+        loadDefaultFlow().then(flow => {
+          questionFlow = flow;
+          defaultQuestionFlow = flow;
+          // Set the default flow's start node id
+          const hasIncomingEdges = new Set();
+          questionFlow.forEach(node => {
+            node.options.forEach(option => {
+              if (option.next && option.next !== 'ticket') {
+                hasIncomingEdges.add(option.next);
+              }
+            });
+          });
+          // Prefer first 'question' node with no incoming edges
+          const startQuestionNodes = questionFlow.filter(node => node.type === 'question' && !hasIncomingEdges.has(node.id));
+          if (startQuestionNodes.length > 0) {
+            defaultFlowStartNodeId = startQuestionNodes[0].id;
+          } else {
+            // Fallback: first 'question' node
+            const anyQuestion = questionFlow.find(node => node.type === 'question');
+            if (anyQuestion) {
+              defaultFlowStartNodeId = anyQuestion.id;
+            } else {
+              // Fallback: any node
+              defaultFlowStartNodeId = questionFlow.length > 0 ? questionFlow[0].id : 'supportType';
+            }
+          }
+          // After loading, start the flow
+          startQuestionFlow();
+        });
+        return;
+      }
       // Use the already loaded flow instead of loading it again
       console.log('HelpWidget: Support tab clicked, using existing flow with', questionFlow.length, 'nodes');
-        // Show question flow first
-        if (!questionFlowState.active && questionFlowState.answers.length === 0) {
-          startQuestionFlow();
-        } else if (questionFlowState.active) {
-          renderQuestionFlow(questionFlowState.currentId || 'supportType');
-        } else {
-          renderSupportForm();
-        }
+      // Show question flow first
+      if (!questionFlowState.active && questionFlowState.answers.length === 0) {
+        startQuestionFlow();
+      } else if (questionFlowState.active) {
+        renderQuestionFlow(questionFlowState.currentId || 'supportType');
+      } else {
+        renderSupportForm();
+      }
     }
   }
 
