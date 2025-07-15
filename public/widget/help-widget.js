@@ -1246,11 +1246,11 @@
         <div class="help-widget__article-content tiptap">
           ${article.content}
         </div>
-        <div class="help-widget__article-feedback" style="margin-top:32px;padding:20px 0 8px 0;background:#f6f8fa;border-radius:10px;text-align:center;">
-          <div class="help-widget__article-feedback-question" style="font-size:1.1rem;font-weight:600;margin-bottom:16px;">Did this article resolve your query?</div>
-          <div class="help-widget__article-feedback-buttons" style="display:flex;justify-content:center;gap:18px;">
-            <button class="help-widget__article-feedback-yes" style="min-width:70px;padding:10px 22px;border-radius:999px;border:none;background:#22c55e;color:white;font-weight:600;font-size:1rem;cursor:pointer;transition:background 0.2s;box-shadow:0 1px 4px rgba(34,197,94,0.08);">Yes</button>
-            <button class="help-widget__article-feedback-no" style="min-width:70px;padding:10px 22px;border-radius:999px;border:none;background:#ef4444;color:white;font-weight:600;font-size:1rem;cursor:pointer;transition:background 0.2s;box-shadow:0 1px 4px rgba(239,68,68,0.08);">No</button>
+        <div class="help-widget__article-feedback">
+          <div class="help-widget__article-feedback-question">Did this article resolve your query?</div>
+          <div class="help-widget__article-feedback-buttons">
+            <button class="help-widget__article-feedback-yes">Yes</button>
+            <button class="help-widget__article-feedback-no">No</button>
           </div>
         </div>
       </div>
@@ -2030,6 +2030,68 @@
       }
       .help-widget--dark .help-widget__back-to-list {
         color: #8C4FFB;
+      }
+      .help-widget__article-feedback {
+        margin-top: 32px;
+        padding: 20px 0 8px 0;
+        background: #f6f8fa;
+        border-radius: 10px;
+        text-align: center;
+      }
+      .help-widget__article-feedback-question {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 16px;
+      }
+      .help-widget__article-feedback-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 18px;
+      }
+      .help-widget__article-feedback-yes,
+      .help-widget__article-feedback-no {
+        min-width: 70px;
+        padding: 10px 22px;
+        border-radius: 999px;
+        border: none;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background 0.2s;
+        box-shadow: 0 1px 4px rgba(34,197,94,0.08);
+      }
+      .help-widget__article-feedback-yes {
+        background: #22c55e;
+        color: white;
+      }
+      .help-widget__article-feedback-no {
+        background: #ef4444;
+        color: white;
+      }
+      .help-widget__article-feedback-thankyou {
+        font-size: 1.05rem;
+        font-weight: 500;
+        color: #22c55e;
+        padding: 10px 0;
+      }
+      /* Dark mode styles for feedback section */
+      .help-widget--dark .help-widget__article-feedback {
+        background: #232329;
+        color: #f3f3f3;
+      }
+      .help-widget--dark .help-widget__article-feedback-question {
+        color: #f3f3f3;
+      }
+      .help-widget--dark .help-widget__article-feedback-yes {
+        background: #16a34a;
+        color: #fff;
+      }
+      .help-widget--dark .help-widget__article-feedback-no {
+        background: #dc2626;
+        color: #fff;
+      }
+      .help-widget--dark .help-widget__article-feedback-thankyou {
+        color: #22c55e;
       }
     `;
   }
