@@ -2405,7 +2405,7 @@
             const screenshot = canvas.toDataURL('image/png');
             const ticket = { name, email, message: messageWithErrors, file: fileInfo, screenshot, console: capturedConsole.slice(-50), network: capturedNetwork.slice(-20), video: videoAttachment, localStorage: localStorageAttachment, priority: ticketPriority };
             // Submit to backend
-            fetch('/api/widget/support-ticket', {
+            fetch(withRoleParam(`${config.apiBaseUrl}/support-ticket`), {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(ticket)
