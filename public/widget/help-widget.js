@@ -188,6 +188,7 @@
   }
 
   let questionFlow = getDefaultQuestionFlow(); // Initialize with fallback first
+  let defaultQuestionFlow = questionFlow;
 
   // Clear any cached flow data from localStorage
   try {
@@ -198,8 +199,32 @@
 
   // Load the actual default flow from API
   loadDefaultFlow().then(flow => {
-    console.log('HelpWidget: Default flow loaded, replacing fallback with:', flow.length, 'nodes');
     questionFlow = flow;
+    defaultQuestionFlow = flow;
+    // Set the default flow's start node id
+    const hasIncomingEdges = new Set();
+    questionFlow.forEach(node => {
+      node.options.forEach(option => {
+        if (option.next && option.next !== 'ticket') {
+          hasIncomingEdges.add(option.next);
+        }
+      });
+    });
+    // Prefer first 'question' node with no incoming edges
+    const startQuestionNodes = questionFlow.filter(node => node.type === 'question' && !hasIncomingEdges.has(node.id));
+    if (startQuestionNodes.length > 0) {
+      defaultFlowStartNodeId = startQuestionNodes[0].id;
+    } else {
+      // Fallback: first 'question' node
+      const anyQuestion = questionFlow.find(node => node.type === 'question');
+      if (anyQuestion) {
+        defaultFlowStartNodeId = anyQuestion.id;
+      } else {
+        // Fallback: any node
+        defaultFlowStartNodeId = questionFlow.length > 0 ? questionFlow[0].id : 'supportType';
+      }
+    }
+    console.log('HelpWidget: Default flow loaded, replacing fallback with:', flow.length, 'nodes');
   });
 
   function startQuestionFlow() {
@@ -321,9 +346,7 @@
       });
       html += '</div>';
     }
-    if (questionFlowState.answers.length > 0) {
-      html += `<button class="help-widget__question-back" style="margin-top:16px;background:none;border:none;color:#8C4FFB;cursor:pointer;">← Back</button>`;
-    }
+
     html += '</div>';
     elements.content.innerHTML = html;
     // Back to list
@@ -374,7 +397,47 @@
         const article = allArticles.find(a => a.id === q.articleId);
         if (article) {
           renderArticleContent(article);
-          // ...feedback, etc...
+          // Add feedback handlers for Yes/No
+          setTimeout(() => {
+            const yesBtn = elements.content.querySelector('.help-widget__article-feedback-yes');
+            const noBtn = elements.content.querySelector('.help-widget__article-feedback-no');
+            if (yesBtn) {
+              yesBtn.addEventListener('click', () => {
+                // Find outgoing edge labeled 'Yes'
+                const yesEdge = questionFlow
+                  .flatMap(n => n.options.map(opt => ({ from: n.id, ...opt })))
+                  .find(opt => opt.from === q.id && opt.label && opt.label.toLowerCase() === 'yes');
+                if (yesEdge && yesEdge.next) {
+                  renderQuestionFlow(yesEdge.next);
+                } else {
+                  elements.content.querySelector('.help-widget__article-feedback').innerHTML = '<div class="help-widget__article-feedback-thankyou">Thank you for your feedback!</div>';
+                }
+              });
+            }
+            if (noBtn) {
+              noBtn.addEventListener('click', () => {
+                // Find outgoing edge labeled 'No'
+                const noEdge = questionFlow
+                  .flatMap(n => n.options.map(opt => ({ from: n.id, ...opt })))
+                  .find(opt => opt.from === q.id && opt.label && opt.label.toLowerCase() === 'no');
+                if (noEdge && noEdge.next) {
+                  // Check if the next node is a ticket/support form
+                  const nextNode = questionFlow.find(n => n.id === noEdge.next);
+                  if (nextNode && nextNode.type === 'ticket') {
+                    unresolvedArticleContext = {
+                      articleId: q.articleId,
+                      articleTitle: q.question || '',
+                    };
+                  } else {
+                    unresolvedArticleContext = null;
+                  }
+                  renderQuestionFlow(noEdge.next);
+                } else {
+                  elements.content.querySelector('.help-widget__article-feedback').innerHTML = '<div class="help-widget__article-feedback-thankyou">Thank you for your feedback!</div>';
+                }
+              });
+            }
+          }, 0);
           return;
         }
       }
@@ -398,8 +461,87 @@
       return;
     }
     // --- END ARTICLE NODE HANDLING ---
+
+    // Helper to get the start node id of the flow
+    function getFlowStartNodeId() {
+      const nodeIds = questionFlow.map(n => n.id);
+      const hasIncomingEdges = new Set();
+      questionFlow.forEach(node => {
+        node.options.forEach(option => {
+          if (option.next && option.next !== 'ticket') {
+            hasIncomingEdges.add(option.next);
+          }
+        });
+      });
+      const startNodes = questionFlow.filter(node => !hasIncomingEdges.has(node.id));
+      return startNodes.length > 0 ? startNodes[0].id : (questionFlow.length > 0 ? questionFlow[0].id : 'supportType');
+    }
+
+    // Add Restart button to every step, above the step/question title, aligned right, minimal style
+    {
+      const questionFlowDiv = elements.content.querySelector('.help-widget__question-flow');
+      // Only show Restart if not on the first step of the default flow
+      const isFirstStep = currentId === (defaultFlowStartNodeId || getFlowStartNodeId());
+      if (!isFirstStep) {
+        const restartBtn = document.createElement('button');
+        restartBtn.setAttribute('type', 'button');
+        restartBtn.setAttribute('aria-label', 'Restart flow');
+        restartBtn.setAttribute('title', 'Restart flow');
+        restartBtn.className = 'help-widget__flow-restart-btn';
+        restartBtn.style = [
+          'position: absolute',
+          'top: 0',
+          'right: 0',
+          'background: transparent',
+          'border: none',
+          'color: #8C4FFB',
+          'font-size: 1.02rem',
+          'font-weight: 600',
+          'border-radius: 6px',
+          'padding: 4px 8px 4px 4px',
+          'cursor: pointer',
+          'transition: background 0.15s, color 0.15s, box-shadow 0.15s',
+          'outline: none',
+          'display: flex',
+          'align-items: center',
+          'gap: 4px',
+          'z-index: 10',
+        ].join(';');
+        restartBtn.onmouseover = function() {
+          restartBtn.style.background = '#f3f0ff';
+          restartBtn.style.color = '#6d28d9';
+          restartBtn.style.boxShadow = '0 1px 4px rgba(140,79,251,0.08)';
+        };
+        restartBtn.onmouseout = function() {
+          restartBtn.style.background = 'transparent';
+          restartBtn.style.color = '#8C4FFB';
+          restartBtn.style.boxShadow = 'none';
+        };
+        restartBtn.innerHTML = `
+          <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 12v-2a4 4 0 0 1 4-4h10\"/><path d=\"M21 12v2a4 4 0 0 1-4 4H7\"/><path d=\"M9 17l-2 2 2 2\"/><path d=\"M15 7l2-2-2-2\"/></svg>
+          <span style=\"font-size:0.98rem;font-weight:600;\">Restart</span>
+        `;
+        restartBtn.onclick = function() {
+          questionFlowState.history = [];
+          questionFlowState.answers = [];
+          if (defaultQuestionFlow) {
+            questionFlow = defaultQuestionFlow;
+          }
+          let startId = defaultFlowStartNodeId || getFlowStartNodeId();
+          let startNode = questionFlow.find(n => n.id === startId);
+          if (!startNode || startNode.type !== 'question') {
+            // Fallback: find any question node
+            const anyQuestion = questionFlow.find(n => n.type === 'question');
+            if (anyQuestion) startId = anyQuestion.id;
+          }
+          renderQuestionFlow(startId);
+        };
+        // Ensure the question flow div is relatively positioned for absolute child
+        questionFlowDiv.style.position = 'relative';
+        questionFlowDiv.appendChild(restartBtn);
+      }
+    }
   }
-  // --- END: Question Flow State ---
 
   // DOM elements
   let elements = {
@@ -1068,7 +1210,7 @@
   function renderArticleContent(article) {
     const html = `
       <div class="help-widget__article-view">
-        <button class="help-widget__back-to-list" type="button">← Back to Help Centre</button>
+        ${state.activeTab === 'help' ? '<button class="help-widget__back-to-list" type="button">← Back to Help Centre</button>' : ''}
         <h2 class="help-widget__article-title">${article.title}</h2>
         <div class="help-widget__article-meta">
           <span class="help-widget__article-date">${new Date(article.created_at).toLocaleDateString()}</span>
@@ -1080,19 +1222,102 @@
         <div class="help-widget__article-content tiptap">
           ${article.content}
         </div>
+        <div class="help-widget__article-feedback" style="margin-top:32px;padding:20px 0 8px 0;background:#f6f8fa;border-radius:10px;text-align:center;">
+          <div class="help-widget__article-feedback-question" style="font-size:1.1rem;font-weight:600;margin-bottom:16px;">Did this article resolve your query?</div>
+          <div class="help-widget__article-feedback-buttons" style="display:flex;justify-content:center;gap:18px;">
+            <button class="help-widget__article-feedback-yes" style="min-width:70px;padding:10px 22px;border-radius:999px;border:none;background:#22c55e;color:white;font-weight:600;font-size:1rem;cursor:pointer;transition:background 0.2s;box-shadow:0 1px 4px rgba(34,197,94,0.08);">Yes</button>
+            <button class="help-widget__article-feedback-no" style="min-width:70px;padding:10px 22px;border-radius:999px;border:none;background:#ef4444;color:white;font-weight:600;font-size:1rem;cursor:pointer;transition:background 0.2s;box-shadow:0 1px 4px rgba(239,68,68,0.08);">No</button>
+          </div>
+        </div>
       </div>
     `;
     
     elements.content.innerHTML = html;
     // Add back button handler
-    const backBtn = elements.content.querySelector('.help-widget__back-to-list');
-    if (backBtn) {
-      backBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        renderContent({ articles: allArticles });
-        state.viewMode = 'list';
-        state.currentArticle = null;
+    if (state.activeTab === 'help') {
+      const backBtn = elements.content.querySelector('.help-widget__back-to-list');
+      if (backBtn) {
+        backBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          renderContent({ articles: allArticles });
+          state.viewMode = 'list';
+          state.currentArticle = null;
+        });
+      }
+    }
+    // Add feedback handlers
+    const yesBtn = elements.content.querySelector('.help-widget__article-feedback-yes');
+    const noBtn = elements.content.querySelector('.help-widget__article-feedback-no');
+    if (yesBtn) {
+      yesBtn.addEventListener('click', () => {
+        elements.content.querySelector('.help-widget__article-feedback').innerHTML = '<div class="help-widget__article-feedback-thankyou">Thank you for your feedback!</div>';
       });
+    }
+    if (noBtn) {
+      noBtn.addEventListener('click', () => {
+        elements.content.querySelector('.help-widget__article-feedback').innerHTML = '<div class="help-widget__article-feedback-thankyou">Thank you for your feedback!</div>';
+      });
+    }
+
+    // In renderArticleContent, after the back button logic, add:
+    if (questionFlow && questionFlow.length > 0 && state.activeTab !== 'help') {
+      const articleView = elements.content.querySelector('.help-widget__article-view');
+      const restartBtn = document.createElement('button');
+      restartBtn.setAttribute('type', 'button');
+      restartBtn.setAttribute('aria-label', 'Restart flow');
+      restartBtn.setAttribute('title', 'Restart flow');
+      restartBtn.className = 'help-widget__flow-restart-btn';
+      restartBtn.style = [
+        'position: absolute',
+        'top: 0',
+        'right: 0',
+        'background: transparent',
+        'border: none',
+        'color: #8C4FFB',
+        'font-size: 1.02rem',
+        'font-weight: 600',
+        'border-radius: 6px',
+        'padding: 4px 8px 4px 4px',
+        'cursor: pointer',
+        'transition: background 0.15s, color 0.15s, box-shadow 0.15s',
+        'outline: none',
+        'display: flex',
+        'align-items: center',
+        'gap: 4px',
+        'z-index: 10',
+      ].join(';');
+      restartBtn.onmouseover = function() {
+        restartBtn.style.background = '#f3f0ff';
+        restartBtn.style.color = '#6d28d9';
+        restartBtn.style.boxShadow = '0 1px 4px rgba(140,79,251,0.08)';
+      };
+      restartBtn.onmouseout = function() {
+        restartBtn.style.background = 'transparent';
+        restartBtn.style.color = '#8C4FFB';
+        restartBtn.style.boxShadow = 'none';
+      };
+      restartBtn.innerHTML = `
+        <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 12v-2a4 4 0 0 1 4-4h10\"/><path d=\"M21 12v2a4 4 0 0 1-4 4H7\"/><path d=\"M9 17l-2 2 2 2\"/><path d=\"M15 7l2-2-2-2\"/></svg>
+        <span style=\"font-size:0.98rem;font-weight:600;\">Restart</span>
+      `;
+      restartBtn.onclick = function() {
+        questionFlowState.history = [];
+        questionFlowState.answers = [];
+        if (defaultQuestionFlow) {
+          questionFlow = defaultQuestionFlow;
+        }
+        let startId = defaultFlowStartNodeId || getFlowStartNodeId();
+        let startNode = questionFlow.find(n => n.id === startId);
+        if (!startNode || startNode.type !== 'question') {
+          // Fallback: find any question node
+          const anyQuestion = questionFlow.find(n => n.type === 'question');
+          if (anyQuestion) startId = anyQuestion.id;
+        }
+        renderQuestionFlow(startId);
+      };
+      // Ensure the article view is relatively positioned for absolute child
+      articleView.style.position = 'relative';
+      articleView.appendChild(restartBtn);
     }
   }
 
@@ -1883,9 +2108,24 @@
       }).join('\n') + '\n---\n';
     }
     // --- END: Add question flow summary ---
+    // In renderSupportForm, after questionSummary is built:
+    if (unresolvedArticleContext) {
+      // Insert before the last line (Support Form: Support Form)
+      const lines = questionSummary.split('\n');
+      const idx = lines.findIndex(line => line.trim().toLowerCase().startsWith('support form:'));
+      const articleLine = `Article "${unresolvedArticleContext.articleTitle}" did not resolve query`;
+      if (idx !== -1) {
+        lines.splice(idx, 0, articleLine);
+        questionSummary = lines.join('\n');
+      } else {
+        questionSummary += articleLine + '\n';
+      }
+      unresolvedArticleContext = null; // Reset after use
+    }
+    // Remove unresolvedNote logic and its display from the form.
     elements.content.innerHTML = `
       <div class="help-widget__support-form">
-        <button class="help-widget__back-to-list" type="button">← Back to Help Centre</button>
+        ${state.activeTab === 'help' ? '<button class="help-widget__back-to-list" type="button">← Back to Help Centre</button>' : ''}
         <h2 style="margin-bottom: 12px;">Contact Support</h2>
         <form id="supportTicketForm">
           <label style="display:block;margin-bottom:6px;">Name <input name="name" type="text" required style="width:100%;margin-bottom:12px;padding:8px;border-radius:4px;border:1px solid #ccc;"></label>
@@ -1902,14 +2142,16 @@
       </div>
     `;
     // Add back button handler
-    const backBtn = elements.content.querySelector('.help-widget__back-to-list');
-    if (backBtn) {
-      backBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        setActiveTab('help');
-        state.viewMode = 'list';
-        state.currentArticle = null;
-      });
+    if (state.activeTab === 'help') {
+      const backBtn = elements.content.querySelector('.help-widget__back-to-list');
+      if (backBtn) {
+        backBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          setActiveTab('help');
+          state.viewMode = 'list';
+          state.currentArticle = null;
+        });
+      }
     }
     // Screen recording logic
     let mediaRecorder = null;
@@ -2121,6 +2363,68 @@
         });
       });
     }
+
+
+    // In renderSupportForm, after the back button logic, add:
+    if (questionFlow && questionFlow.length > 0 && state.activeTab === 'support') {
+      const supportFormDiv = elements.content.querySelector('.help-widget__support-form');
+      const restartBtn = document.createElement('button');
+      restartBtn.setAttribute('type', 'button');
+      restartBtn.setAttribute('aria-label', 'Restart flow');
+      restartBtn.setAttribute('title', 'Restart flow');
+      restartBtn.className = 'help-widget__flow-restart-btn';
+      restartBtn.style = [
+        'position: absolute',
+        'top: 0',
+        'right: 0',
+        'background: transparent',
+        'border: none',
+        'color: #8C4FFB',
+        'font-size: 1.02rem',
+        'font-weight: 600',
+        'border-radius: 6px',
+        'padding: 4px 8px 4px 4px',
+        'cursor: pointer',
+        'transition: background 0.15s, color 0.15s, box-shadow 0.15s',
+        'outline: none',
+        'display: flex',
+        'align-items: center',
+        'gap: 4px',
+        'z-index: 10',
+      ].join(';');
+      restartBtn.onmouseover = function() {
+        restartBtn.style.background = '#f3f0ff';
+        restartBtn.style.color = '#6d28d9';
+        restartBtn.style.boxShadow = '0 1px 4px rgba(140,79,251,0.08)';
+      };
+      restartBtn.onmouseout = function() {
+        restartBtn.style.background = 'transparent';
+        restartBtn.style.color = '#8C4FFB';
+        restartBtn.style.boxShadow = 'none';
+      };
+      restartBtn.innerHTML = `
+        <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 12v-2a4 4 0 0 1 4-4h10\"/><path d=\"M21 12v2a4 4 0 0 1-4 4H7\"/><path d=\"M9 17l-2 2 2 2\"/><path d=\"M15 7l2-2-2-2\"/></svg>
+        <span style=\"font-size:0.98rem;font-weight:600;\">Restart</span>
+      `;
+      restartBtn.onclick = function() {
+        questionFlowState.history = [];
+        questionFlowState.answers = [];
+        if (defaultQuestionFlow) {
+          questionFlow = defaultQuestionFlow;
+        }
+        let startId = defaultFlowStartNodeId || getFlowStartNodeId();
+        let startNode = questionFlow.find(n => n.id === startId);
+        if (!startNode || startNode.type !== 'question') {
+          // Fallback: find any question node
+          const anyQuestion = questionFlow.find(n => n.type === 'question');
+          if (anyQuestion) startId = anyQuestion.id;
+        }
+        renderQuestionFlow(startId);
+      };
+      // Ensure the support form div is relatively positioned for absolute child
+      supportFormDiv.style.position = 'relative';
+      supportFormDiv.appendChild(restartBtn);
+    }
   }
 
   // Improved html2canvas loader: handles multiple calls and script load errors
@@ -2154,4 +2458,8 @@
   // Debug: Log that the script has loaded
   console.log('HelpWidget: Script loaded and ready');
 
+  // Add at the top-level, after other state variables:
+  let unresolvedArticleContext = null;
+  // Add at the top-level:
+  let defaultFlowStartNodeId = null;
 })(); 

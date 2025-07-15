@@ -55,6 +55,8 @@ export default function WebWidgetFlowEditorPage() {
   const [availableArticles, setAvailableArticles] = useState<{ id: string; title: string }[]>([]);
   const [selectedArticleId, setSelectedArticleId] = useState('');
   const [selectedArticleTitle, setSelectedArticleTitle] = useState('');
+  const [edgeCreationMode, setEdgeCreationMode] = useState<null | 'yes' | 'no'>(null);
+  const [edgeSource, setEdgeSource] = useState<string | null>(null);
 
   const handleConnect = useCallback(
     (params: Edge | Connection) => setEdges((eds: Edge[]) => addEdge(params, eds)),
@@ -183,31 +185,50 @@ export default function WebWidgetFlowEditorPage() {
   // Handle article selection and add article node
   const handleArticleSelection = () => {
     if (!selectedArticleId || !selectedArticleTitle) return;
-    const id = uuidv4();
-    setNodes((nds) => [
-      ...nds,
-      {
-        id,
-        type: 'article',
-        data: {
-          label: selectedArticleTitle,
-          articleId: selectedArticleId,
-          articleTitle: selectedArticleTitle,
+    if (editNode && editNode.type === 'article') {
+      // Update the existing article node
+      setNodes((nds) => nds.map(n =>
+        n.id === editNode.id
+          ? {
+              ...n,
+              data: {
+                ...n.data,
+                label: selectedArticleTitle,
+                articleId: selectedArticleId,
+                articleTitle: selectedArticleTitle,
+              },
+            }
+          : n
+      ));
+      setEditNode(null);
+    } else {
+      // Add a new article node
+      const id = uuidv4();
+      setNodes((nds) => [
+        ...nds,
+        {
+          id,
+          type: 'article',
+          data: {
+            label: selectedArticleTitle,
+            articleId: selectedArticleId,
+            articleTitle: selectedArticleTitle,
+          },
+          position: {
+            x: 100 + Math.random() * 400,
+            y: 100 + Math.random() * 200,
+          },
+          style: {
+            background: '#dbeafe', // blue-100
+            border: '2px solid #3b82f6', // blue-500
+            borderRadius: '8px',
+            padding: '10px',
+            minWidth: '150px',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+          },
         },
-        position: {
-          x: 100 + Math.random() * 400,
-          y: 100 + Math.random() * 200,
-        },
-        style: {
-          background: '#dbeafe', // blue-100
-          border: '2px solid #3b82f6', // blue-500
-          borderRadius: '8px',
-          padding: '10px',
-          minWidth: '150px',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-        },
-      },
-    ]);
+      ]);
+    }
     setArticleSelectorOpen(false);
     setSelectedArticleId('');
     setSelectedArticleTitle('');
@@ -215,8 +236,15 @@ export default function WebWidgetFlowEditorPage() {
 
   // Open modal on node double click
   const handleNodeDoubleClick = useCallback((event: React.MouseEvent, node: Node) => {
-    setEditNode(node);
-    setEditLabel(node.data?.label || '');
+    if (node.type === 'article') {
+      setEditNode(node);
+      setSelectedArticleId(node.data?.articleId || '');
+      setSelectedArticleTitle(node.data?.articleTitle || node.data?.label || '');
+      setArticleSelectorOpen(true);
+    } else {
+      setEditNode(node);
+      setEditLabel(node.data?.label || '');
+    }
   }, []);
 
   // Open modal on edge double click
@@ -354,6 +382,28 @@ export default function WebWidgetFlowEditorPage() {
     }
   };
 
+  // Node click handler for edge creation mode
+  const handleNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+    if (edgeCreationMode) {
+      if (!edgeSource) {
+        setEdgeSource(node.id);
+      } else if (edgeSource !== node.id) {
+        // Create edge
+        setEdges(eds => [
+          ...eds,
+          {
+            id: `${edgeSource}-${node.id}-${edgeCreationMode}`,
+            source: edgeSource,
+            target: node.id,
+            label: edgeCreationMode === 'yes' ? 'Yes' : 'No',
+          },
+        ]);
+        setEdgeCreationMode(null);
+        setEdgeSource(null);
+      }
+    }
+  }, [edgeCreationMode, edgeSource, setEdges]);
+
   if (loading) {
     return <div className="p-8">Loading…</div>;
   }
@@ -402,7 +452,16 @@ export default function WebWidgetFlowEditorPage() {
           <Button variant="outline" onClick={() => handleAddNode('article')}>Add Article</Button>
           <Button variant="outline" onClick={() => handleAddNode('ticket')}>Add ticket form</Button>
           <Button variant="outline" onClick={() => handleAddNode('flow')}>Add Flow</Button>
+          <Button variant="secondary" onClick={() => { setEdgeCreationMode('yes'); setEdgeSource(null); }}>Add Yes Edge</Button>
+          <Button variant="secondary" onClick={() => { setEdgeCreationMode('no'); setEdgeSource(null); }}>Add No Edge</Button>
         </div>
+        {edgeCreationMode && (
+          <div className="mb-2 text-blue-700 font-medium">
+            {edgeSource
+              ? `Select the target node for the '${edgeCreationMode === 'yes' ? 'Yes' : 'No'}' edge.`
+              : `Select the source node for the '${edgeCreationMode === 'yes' ? 'Yes' : 'No'}' edge.`}
+          </div>
+        )}
         <div style={{ width: '100%', height: 600, background: '#f8fafc', borderRadius: 8, border: '1px solid #e5e7eb' }}>
           <ReactFlow
             nodes={nodes}
@@ -412,13 +471,14 @@ export default function WebWidgetFlowEditorPage() {
             onConnect={handleConnect}
             onNodeDoubleClick={handleNodeDoubleClick}
             onEdgeDoubleClick={handleEdgeDoubleClick}
+            onNodeClick={handleNodeClick}
             fitView
           >
             <MiniMap />
             <Controls />
             <Background gap={16} />
           </ReactFlow>
-          <Dialog open={!!editNode} onOpenChange={open => !open && setEditNode(null)}>
+          <Dialog open={!!editNode && editNode.type !== 'article'} onOpenChange={open => !open && setEditNode(null)}>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Edit Node</DialogTitle>
