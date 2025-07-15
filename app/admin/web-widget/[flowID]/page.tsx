@@ -57,6 +57,7 @@ export default function WebWidgetFlowEditorPage() {
   const [selectedArticleTitle, setSelectedArticleTitle] = useState('');
   const [edgeCreationMode, setEdgeCreationMode] = useState<null | 'yes' | 'no'>(null);
   const [edgeSource, setEdgeSource] = useState<string | null>(null);
+  const [editPriority, setEditPriority] = useState('Normal');
 
   const handleConnect = useCallback(
     (params: Edge | Connection) => setEdges((eds: Edge[]) => addEdge(params, eds)),
@@ -244,6 +245,9 @@ export default function WebWidgetFlowEditorPage() {
     } else {
       setEditNode(node);
       setEditLabel(node.data?.label || '');
+      if (node.type === 'ticket') {
+        setEditPriority(node.data?.priority || 'Normal');
+      }
     }
   }, []);
 
@@ -256,7 +260,13 @@ export default function WebWidgetFlowEditorPage() {
   // Save node changes
   const handleSaveNode = () => {
     if (!editNode) return;
-    setNodes(nds => nds.map(n => n.id === editNode.id ? { ...n, data: { ...n.data, label: editLabel } } : n));
+    setNodes(nds => nds.map(n => {
+      if (n.id !== editNode.id) return n;
+      if (editNode.type === 'ticket') {
+        return { ...n, data: { ...n.data, label: editLabel, priority: editPriority } };
+      }
+      return { ...n, data: { ...n.data, label: editLabel } };
+    }));
     setEditNode(null);
   };
 
@@ -486,6 +496,21 @@ export default function WebWidgetFlowEditorPage() {
               <div className="space-y-4">
                 <label className="block text-sm font-medium mb-1">Label</label>
                 <Input value={editLabel} onChange={e => setEditLabel(e.target.value)} />
+                {editNode?.type === 'ticket' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Priority</label>
+                    <select
+                      className="w-full px-3 py-2 border rounded"
+                      value={editPriority}
+                      onChange={e => setEditPriority(e.target.value)}
+                    >
+                      <option value="Low">Low</option>
+                      <option value="Normal">Normal</option>
+                      <option value="High">High</option>
+                      <option value="Urgent">Urgent</option>
+                    </select>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <DialogClose asChild>
