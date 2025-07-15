@@ -51,21 +51,6 @@ interface ZendeskTicketPayload {
 }
 
 export async function POST(req: NextRequest) {
-  // Proxy to production if on localhost:4200
-  // TODO: remove this once we have a proper staging environment
-  const referer = req.headers.get('referer') || '';
-  if (referer.includes('localhost:4200')) {
-    const prodRes = await fetch('https://vm-product-school.vercel.app/api/widget/support-ticket', {
-      method: 'POST',
-      headers: {
-        'Content-Type': req.headers.get('content-type') || 'application/json',
-        'X-API-Key': req.headers.get('x-api-key') || '',
-      },
-      body: req.body,
-    });
-    const data = await prodRes.json();
-    return NextResponse.json(data, { status: prodRes.status, headers: corsHeaders });
-  }
   try {
     const body = await req.json();
     const { name, email, message, file, screenshot, console: logs, network, video, localStorage: localStorageAttachment, priority } = body;
