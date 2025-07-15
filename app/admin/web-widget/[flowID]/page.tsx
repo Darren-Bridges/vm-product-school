@@ -204,31 +204,31 @@ export default function WebWidgetFlowEditorPage() {
       setEditNode(null);
     } else {
       // Add a new article node
-      const id = uuidv4();
-      setNodes((nds) => [
-        ...nds,
-        {
-          id,
-          type: 'article',
-          data: {
-            label: selectedArticleTitle,
-            articleId: selectedArticleId,
-            articleTitle: selectedArticleTitle,
-          },
-          position: {
-            x: 100 + Math.random() * 400,
-            y: 100 + Math.random() * 200,
-          },
-          style: {
-            background: '#dbeafe', // blue-100
-            border: '2px solid #3b82f6', // blue-500
-            borderRadius: '8px',
-            padding: '10px',
-            minWidth: '150px',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-          },
+    const id = uuidv4();
+    setNodes((nds) => [
+      ...nds,
+      {
+        id,
+        type: 'article',
+        data: {
+          label: selectedArticleTitle,
+          articleId: selectedArticleId,
+          articleTitle: selectedArticleTitle,
         },
-      ]);
+        position: {
+          x: 100 + Math.random() * 400,
+          y: 100 + Math.random() * 200,
+        },
+        style: {
+          background: '#dbeafe', // blue-100
+          border: '2px solid #3b82f6', // blue-500
+          borderRadius: '8px',
+          padding: '10px',
+          minWidth: '150px',
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+        },
+      },
+    ]);
     }
     setArticleSelectorOpen(false);
     setSelectedArticleId('');
@@ -243,8 +243,8 @@ export default function WebWidgetFlowEditorPage() {
       setSelectedArticleTitle(node.data?.articleTitle || node.data?.label || '');
       setArticleSelectorOpen(true);
     } else {
-      setEditNode(node);
-      setEditLabel(node.data?.label || '');
+    setEditNode(node);
+    setEditLabel(node.data?.label || '');
       if (node.type === 'ticket') {
         setEditPriority(node.data?.priority || 'Normal');
       }

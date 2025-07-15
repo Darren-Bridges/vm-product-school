@@ -63,7 +63,7 @@
           return flow.nodes.map(n => {
             // Find outgoing edges for this node
             const outgoing = flow.edges.filter(e => e.source === n.id);
-            return {
+            const base = {
               id: n.id,
               question: n.data && n.data.label ? n.data.label : n.id,
               options: outgoing.map(e => ({ label: e.label || 'Option', next: e.target })),
@@ -72,6 +72,10 @@
               flowId: n.data && n.data.flowId ? n.data.flowId : undefined,
               flowSlug: n.data && n.data.flowSlug ? n.data.flowSlug : undefined,
             };
+            if (base.type === 'ticket' && n.data && n.data.priority) {
+              base.priority = n.data.priority;
+            }
+            return base;
           });
         }
       }
@@ -170,7 +174,7 @@
           return flow.nodes.map(n => {
             // Find outgoing edges for this node
             const outgoing = flow.edges.filter(e => e.source === n.id);
-            return {
+            const base = {
               id: n.id,
               question: n.data && n.data.label ? n.data.label : n.id,
               options: outgoing.map(e => ({ label: e.label || 'Option', next: e.target })),
@@ -179,6 +183,10 @@
               flowId: n.data && n.data.flowId ? n.data.flowId : undefined,
               flowSlug: n.data && n.data.flowSlug ? n.data.flowSlug : undefined,
             };
+            if (base.type === 'ticket' && n.data && n.data.priority) {
+              base.priority = n.data.priority;
+            }
+            return base;
           });
         }
       }
@@ -265,6 +273,7 @@
     if (!q) {
       // Fallback: go to ticket form
       questionFlowState.active = false;
+      currentTicketNodeId = null;
       renderSupportForm();
       return;
     }
@@ -279,9 +288,10 @@
           if (flow.nodes && flow.edges) {
             const nodeMap = {};
             flow.nodes.forEach(n => { nodeMap[n.id] = n; });
+            // Build questionFlow array
             const newQuestionFlow = flow.nodes.map(n => {
               const outgoing = flow.edges.filter(e => e.source === n.id);
-              return {
+              const base = {
                 id: n.id,
                 question: n.data && n.data.label ? n.data.label : n.id,
                 options: outgoing.map(e => ({ label: e.label || 'Option', next: e.target })),
@@ -290,6 +300,10 @@
                 flowId: n.data && n.data.flowId ? n.data.flowId : undefined,
                 flowSlug: n.data && n.data.flowSlug ? n.data.flowSlug : undefined,
               };
+              if ((n.type || (n.data && n.data.type)) === 'ticket' && n.data && n.data.priority) {
+                base.priority = n.data.priority;
+              }
+              return base;
             });
             questionFlow = newQuestionFlow;
             // Reset flow state for the new flow
@@ -324,6 +338,7 @@
         questionFlowState.answers.push({ id: q.id, answer: q.question });
       }
       questionFlowState.active = false;
+      currentTicketNodeId = q.id;
       renderSupportForm();
       return;
     }
@@ -368,7 +383,16 @@
         const next = btn.getAttribute('data-next');
         questionFlowState.history.push(currentId);
         questionFlowState.answers.push({ id: currentId, answer: label });
-        if (next === 'ticket') {
+        // Check if next is a ticket node's ID
+        const ticketNode = questionFlow.find(q => q.id === next && q.type === 'ticket');
+        if (ticketNode) {
+          questionFlowState.active = false;
+          currentTicketNodeId = ticketNode.id;
+          renderSupportForm();
+        } else if (next === 'ticket') {
+          // Fallback: generic marker, use first ticket node
+          const firstTicketNode = questionFlow.find(q => q.type === 'ticket');
+          currentTicketNodeId = firstTicketNode ? firstTicketNode.id : null;
           questionFlowState.active = false;
           renderSupportForm();
         } else {
@@ -836,14 +860,14 @@
     } else if (tab === 'support') {
       // Use the already loaded flow instead of loading it again
       console.log('HelpWidget: Support tab clicked, using existing flow with', questionFlow.length, 'nodes');
-      // Show question flow first
-      if (!questionFlowState.active && questionFlowState.answers.length === 0) {
-        startQuestionFlow();
-      } else if (questionFlowState.active) {
-        renderQuestionFlow(questionFlowState.currentId || 'supportType');
-      } else {
-        renderSupportForm();
-      }
+        // Show question flow first
+        if (!questionFlowState.active && questionFlowState.answers.length === 0) {
+          startQuestionFlow();
+        } else if (questionFlowState.active) {
+          renderQuestionFlow(questionFlowState.currentId || 'supportType');
+        } else {
+          renderSupportForm();
+        }
     }
   }
 
@@ -1235,14 +1259,14 @@
     elements.content.innerHTML = html;
     // Add back button handler
     if (state.activeTab === 'help') {
-      const backBtn = elements.content.querySelector('.help-widget__back-to-list');
-      if (backBtn) {
-        backBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          renderContent({ articles: allArticles });
-          state.viewMode = 'list';
-          state.currentArticle = null;
-        });
+    const backBtn = elements.content.querySelector('.help-widget__back-to-list');
+    if (backBtn) {
+      backBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        renderContent({ articles: allArticles });
+        state.viewMode = 'list';
+        state.currentArticle = null;
+      });
       }
     }
     // Add feedback handlers
@@ -2143,14 +2167,14 @@
     `;
     // Add back button handler
     if (state.activeTab === 'help') {
-      const backBtn = elements.content.querySelector('.help-widget__back-to-list');
-      if (backBtn) {
-        backBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          setActiveTab('help');
-          state.viewMode = 'list';
-          state.currentArticle = null;
-        });
+    const backBtn = elements.content.querySelector('.help-widget__back-to-list');
+    if (backBtn) {
+      backBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        setActiveTab('help');
+        state.viewMode = 'list';
+        state.currentArticle = null;
+      });
       }
     }
     // Screen recording logic
@@ -2317,6 +2341,23 @@
         // Append to message
         const messageWithErrors = message + errorSummary;
         // --- END: Append errors to message ---
+
+        // --- BEGIN: Extract ticket priority from flow ---
+        let ticketPriority = 'Normal';
+        if (currentTicketNodeId) {
+          const ticketNode = questionFlow.find(q => q.id === currentTicketNodeId);
+          if (ticketNode && ticketNode.priority) {
+            ticketPriority = ticketNode.priority;
+          } else if (ticketNode && ticketNode.data && ticketNode.data.priority) {
+            ticketPriority = ticketNode.data.priority;
+          }
+        }
+        // --- END: Extract ticket priority from flow ---
+        // Convert priority to lower case for submission
+        if (ticketPriority && typeof ticketPriority === 'string') {
+          ticketPriority = ticketPriority.toLowerCase();
+        }
+
         // Ensure html2canvas is loaded, then capture screenshot
         ensureHtml2CanvasLoaded(async (err) => {
           if (err) {
@@ -2329,7 +2370,7 @@
           try {
             const canvas = await window.html2canvas(document.body, {useCORS:true, logging:false, backgroundColor:null});
             const screenshot = canvas.toDataURL('image/png');
-            const ticket = { name, email, message: messageWithErrors, file: fileInfo, screenshot, console: capturedConsole.slice(-50), network: capturedNetwork.slice(-20), video: videoAttachment, localStorage: localStorageAttachment };
+            const ticket = { name, email, message: messageWithErrors, file: fileInfo, screenshot, console: capturedConsole.slice(-50), network: capturedNetwork.slice(-20), video: videoAttachment, localStorage: localStorageAttachment, priority: ticketPriority };
             // Submit to backend
             fetch('/api/widget/support-ticket', {
               method: 'POST',
@@ -2462,4 +2503,6 @@
   let unresolvedArticleContext = null;
   // Add at the top-level:
   let defaultFlowStartNodeId = null;
+  // Add at the top-level:
+  let currentTicketNodeId = null;
 })(); 

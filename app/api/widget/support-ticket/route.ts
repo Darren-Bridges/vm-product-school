@@ -36,13 +36,14 @@ interface ZendeskTicketPayload {
       name: string;
       email: string;
     };
+    priority?: string;
   };
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, email, message, file, screenshot, console: logs, network, video, localStorage: localStorageAttachment } = body;
+    const { name, email, message, file, screenshot, console: logs, network, video, localStorage: localStorageAttachment, priority } = body;
     const uploadTokens: string[] = [];
 
     // Upload file if present
@@ -114,6 +115,9 @@ export async function POST(req: NextRequest) {
         requester: { name, email },
       },
     };
+    if (priority) {
+      payload.ticket.priority = priority;
+    }
     if (uploadTokens.length > 0) {
       payload.ticket.comment.uploads = uploadTokens;
     }
