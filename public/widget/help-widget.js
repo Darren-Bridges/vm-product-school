@@ -2128,6 +2128,7 @@
 
   // Helper to append userRole as a query param
   function withRoleParam(url) {
+    if (url.includes('/support-ticket')) return url;
     if (config.userRole) {
       return url + (url.includes('?') ? '&' : '?') + 'role=' + encodeURIComponent(config.userRole);
     }

@@ -163,6 +163,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ticket: data.ticket }, { headers: corsHeaders });
   } catch (err: unknown) {
     console.error('Support ticket error:', err);
-    return NextResponse.json({ error: err instanceof Error ? err.message : 'Unknown error' }, { status: 500, headers: corsHeaders });
+    let errorMessage = 'Unknown error';
+    if (err instanceof Error) {
+      errorMessage = err.message;
+      if (err.stack) {
+        errorMessage += '\n' + err.stack;
+      }
+    } else if (typeof err === 'object' && err !== null) {
+      errorMessage = JSON.stringify(err);
+    }
+    return NextResponse.json({ error: errorMessage }, { status: 500, headers: corsHeaders });
   }
 } 
