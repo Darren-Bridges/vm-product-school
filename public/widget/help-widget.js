@@ -1028,10 +1028,21 @@
     });
   }
 
-  /**
-   * Handle search input
-   * @param {Event} event - Search input event
-   */
+  // Add a simple fuzzy match helper
+  function fuzzyMatch(needle, haystack) {
+    if (!needle) return true;
+    if (!haystack) return false;
+    needle = needle.toLowerCase();
+    haystack = haystack.toLowerCase();
+    let hIdx = 0;
+    for (let nIdx = 0; nIdx < needle.length; nIdx++) {
+      hIdx = haystack.indexOf(needle[nIdx], hIdx);
+      if (hIdx === -1) return false;
+      hIdx++;
+    }
+    return true;
+  }
+
   function handleSearch(event) {
     const query = event.target.value.trim().toLowerCase();
     if (!allArticlesLoaded || !allArticles) {
@@ -1042,11 +1053,11 @@
       renderContent({ articles: allArticles });
       return;
     }
-    // Client-side search: filter cached articles
+    // Fuzzy client-side search: filter cached articles
     const filtered = allArticles.filter(article => {
       const title = article.title ? article.title.toLowerCase() : '';
       const content = article.content ? article.content.toLowerCase() : '';
-      return title.includes(query) || content.includes(query);
+      return fuzzyMatch(query, title) || fuzzyMatch(query, content);
     });
     renderContent({ articles: filtered });
   }
