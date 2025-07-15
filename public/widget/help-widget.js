@@ -110,96 +110,40 @@
     return Promise.resolve(allFlows);
   }
 
-  // Get default question flow (fallback)
-  function getDefaultQuestionFlow() {
-    return [
-      {
-        id: 'supportType',
-        question: 'What type of support do you need?',
-        options: [
-          { label: 'Technical Issue', next: 'technicalIssue' },
-          { label: 'Feature Request', next: 'featureRequest' },
-          { label: 'Account/Billing', next: 'accountBilling' },
-          { label: 'Other', next: 'ticket' }
-        ],
-        type: 'question'
-      },
-      {
-        id: 'technicalIssue',
-        question: 'What kind of technical issue are you experiencing?',
-        options: [
-          { label: 'App not working', next: 'ticket' },
-          { label: 'Error message', next: 'ticket' },
-          { label: 'Performance issue', next: 'ticket' },
-          { label: 'Other', next: 'ticket' }
-        ],
-        type: 'question'
-      },
-      {
-        id: 'featureRequest',
-        question: 'What feature would you like to request?',
-        options: [
-          { label: 'New functionality', next: 'ticket' },
-          { label: 'UI/UX improvement', next: 'ticket' },
-          { label: 'Integration request', next: 'ticket' },
-          { label: 'Other', next: 'ticket' }
-        ],
-        type: 'question'
-      },
-      {
-        id: 'accountBilling',
-        question: 'What account or billing issue do you have?',
-        options: [
-          { label: 'Payment problem', next: 'ticket' },
-          { label: 'Account access', next: 'ticket' },
-          { label: 'Subscription issue', next: 'ticket' },
-          { label: 'Other', next: 'ticket' }
-        ],
-        type: 'question'
-      }
-    ];
-  }
-
   // Load the default flow from API
   function loadDefaultFlow() {
     return fetchAllFlows().then(flows => {
-      console.log('HelpWidget: All flows loaded:', flows.map(f => ({ name: f.name, is_default: f.is_default })));
+      allFlows = flows; // cache all flows here
       const defaultFlow = flows.find(flow => flow.is_default);
-      console.log('HelpWidget: Default flow found:', defaultFlow ? defaultFlow.name : 'none');
-      if (defaultFlow && defaultFlow.flow_data) {
+      if (defaultFlow && defaultFlow.flow_data && defaultFlow.flow_data.nodes && defaultFlow.flow_data.edges) {
         // Convert the flow data to questionFlow format
         const flow = defaultFlow.flow_data;
-        if (flow.nodes && flow.edges) {
-          // Map nodes by id for easy lookup
-          const nodeMap = {};
-          flow.nodes.forEach(n => { nodeMap[n.id] = n; });
-          // Build questionFlow array
-          return flow.nodes.map(n => {
-            // Find outgoing edges for this node
-            const outgoing = flow.edges.filter(e => e.source === n.id);
-            const base = {
-              id: n.id,
-              question: n.data && n.data.label ? n.data.label : n.id,
-              options: outgoing.map(e => ({ label: e.label || 'Option', next: e.target })),
-              type: n.type || (n.data && n.data.type) || 'question',
-              articleId: n.data && n.data.articleId ? n.data.articleId : undefined,
-              flowId: n.data && n.data.flowId ? n.data.flowId : undefined,
-              flowSlug: n.data && n.data.flowSlug ? n.data.flowSlug : undefined,
-            };
-            if (base.type === 'ticket' && n.data && n.data.priority) {
-              base.priority = n.data.priority;
-            }
-            return base;
-          });
-        }
+        return flow.nodes.map(n => {
+          const outgoing = flow.edges.filter(e => e.source === n.id);
+          const base = {
+            id: n.id,
+            question: n.data && n.data.label ? n.data.label : n.id,
+            options: outgoing.map(e => ({ label: e.label || 'Option', next: e.target })),
+            type: n.type || (n.data && n.data.type) || 'question',
+            articleId: n.data && n.data.articleId ? n.data.articleId : undefined,
+            flowId: n.data && n.data.flowId ? n.data.flowId : undefined,
+            flowSlug: n.data && n.data.flowSlug ? n.data.flowSlug : undefined,
+          };
+          if (base.type === 'ticket' && n.data && n.data.priority) {
+            base.priority = n.data.priority;
+          }
+          return base;
+        });
+      } else {
+        // No flows found, show support form
+        renderSupportForm();
+        return null;
       }
-      // Fallback to default question flow
-      return getDefaultQuestionFlow();
     });
   }
 
-  let questionFlow = getDefaultQuestionFlow(); // Initialize with fallback first
-  let defaultQuestionFlow = questionFlow;
+  let questionFlow = null;
+  let defaultQuestionFlow = null;
 
   // Clear any cached flow data from localStorage
   try {
@@ -208,35 +152,7 @@
     // Ignore localStorage errors
   }
 
-  // Load the actual default flow from API
-  loadDefaultFlow().then(flow => {
-    questionFlow = flow;
-    defaultQuestionFlow = flow;
-    // Set the default flow's start node id
-    const hasIncomingEdges = new Set();
-    questionFlow.forEach(node => {
-      node.options.forEach(option => {
-        if (option.next && option.next !== 'ticket') {
-          hasIncomingEdges.add(option.next);
-        }
-      });
-    });
-    // Prefer first 'question' node with no incoming edges
-    const startQuestionNodes = questionFlow.filter(node => node.type === 'question' && !hasIncomingEdges.has(node.id));
-    if (startQuestionNodes.length > 0) {
-      defaultFlowStartNodeId = startQuestionNodes[0].id;
-    } else {
-      // Fallback: first 'question' node
-      const anyQuestion = questionFlow.find(node => node.type === 'question');
-      if (anyQuestion) {
-        defaultFlowStartNodeId = anyQuestion.id;
-      } else {
-        // Fallback: any node
-        defaultFlowStartNodeId = questionFlow.length > 0 ? questionFlow[0].id : 'supportType';
-      }
-    }
-    console.log('HelpWidget: Default flow loaded, replacing fallback with:', flow.length, 'nodes');
-  });
+
 
   function startQuestionFlow() {
     console.log('HelpWidget: Starting question flow with:', questionFlow.length, 'nodes');
@@ -284,52 +200,47 @@
     // --- FLOW NODE AUTO-TRANSITION (MUST BE FIRST) ---
     if (q.type === 'flow' && q.flowId) {
       showLoading();
-      fetchAllFlows().then(flows => {
-        const referencedFlow = flows.find(f => f.id === q.flowId);
-        if (referencedFlow && referencedFlow.flow_data) {
-          const flow = referencedFlow.flow_data;
-          if (flow.nodes && flow.edges) {
-            const nodeMap = {};
-            flow.nodes.forEach(n => { nodeMap[n.id] = n; });
-            // Build questionFlow array
-            const newQuestionFlow = flow.nodes.map(n => {
-              const outgoing = flow.edges.filter(e => e.source === n.id);
-              const base = {
-                id: n.id,
-                question: n.data && n.data.label ? n.data.label : n.id,
-                options: outgoing.map(e => ({ label: e.label || 'Option', next: e.target })),
-                type: n.type || (n.data && n.data.type) || 'question',
-                articleId: n.data && n.data.articleId ? n.data.articleId : undefined,
-                flowId: n.data && n.data.flowId ? n.data.flowId : undefined,
-                flowSlug: n.data && n.data.flowSlug ? n.data.flowSlug : undefined,
-              };
-              if ((n.type || (n.data && n.data.type)) === 'ticket' && n.data && n.data.priority) {
-                base.priority = n.data.priority;
-              }
-              return base;
-            });
-            questionFlow = newQuestionFlow;
-            // Reset flow state for the new flow
-            questionFlowState.active = true;
-            questionFlowState.step = 0;
-            questionFlowState.answers = [];
-            questionFlowState.history = [];
-            // Start the referenced flow at its first node
-            if (newQuestionFlow.length > 0) {
-              renderQuestionFlow(newQuestionFlow[0].id);
-            } else {
-              renderSupportForm();
+      const referencedFlow = allFlows ? allFlows.find(f => f.id === q.flowId) : null;
+      if (referencedFlow && referencedFlow.flow_data) {
+        const flow = referencedFlow.flow_data;
+        if (flow.nodes && flow.edges) {
+          const nodeMap = {};
+          flow.nodes.forEach(n => { nodeMap[n.id] = n; });
+          // Build questionFlow array
+          const newQuestionFlow = flow.nodes.map(n => {
+            const outgoing = flow.edges.filter(e => e.source === n.id);
+            const base = {
+              id: n.id,
+              question: n.data && n.data.label ? n.data.label : n.id,
+              options: outgoing.map(e => ({ label: e.label || 'Option', next: e.target })),
+              type: n.type || (n.data && n.data.type) || 'question',
+              articleId: n.data && n.data.articleId ? n.data.articleId : undefined,
+              flowId: n.data && n.data.flowId ? n.data.flowId : undefined,
+              flowSlug: n.data && n.data.flowSlug ? n.data.flowSlug : undefined,
+            };
+            if ((n.type || (n.data && n.data.type)) === 'ticket' && n.data && n.data.priority) {
+              base.priority = n.data.priority;
             }
+            return base;
+          });
+          questionFlow = newQuestionFlow;
+          // Reset flow state for the new flow
+          questionFlowState.active = true;
+          questionFlowState.step = 0;
+          questionFlowState.answers = [];
+          questionFlowState.history = [];
+          // Start the referenced flow at its first node
+          if (newQuestionFlow.length > 0) {
+            renderQuestionFlow(newQuestionFlow[0].id);
           } else {
             renderSupportForm();
           }
         } else {
           renderSupportForm();
         }
-      }).catch(err => {
-        console.error('HelpWidget: Failed to load referenced flow:', err);
+      } else {
         renderSupportForm();
-      });
+      }
       return;
     }
     // --- END FLOW NODE AUTO-TRANSITION ---
@@ -862,7 +773,7 @@
       }
     } else if (tab === 'support') {
       // If flows are not loaded, load them now
-      if (!defaultQuestionFlow || defaultQuestionFlow === getDefaultQuestionFlow()) {
+      if (!defaultQuestionFlow) {
         showLoading();
         loadDefaultFlow().then(flow => {
           questionFlow = flow;
@@ -1009,7 +920,36 @@
     elements.container.classList.add('help-widget--open');
     setActiveTab('help');
     elements.search.focus();
-    fetchAllArticlesAndShowList();
+    // Only fetch flows if not already loaded
+    if (!defaultQuestionFlow) {
+      loadDefaultFlow().then(flow => {
+        if (flow) {
+          questionFlow = flow;
+          defaultQuestionFlow = flow;
+          // Set the default flow's start node id
+          const hasIncomingEdges = new Set();
+          questionFlow.forEach(node => {
+            node.options.forEach(option => {
+              if (option.next && option.next !== 'ticket') {
+                hasIncomingEdges.add(option.next);
+              }
+            });
+          });
+          const startQuestionNodes = questionFlow.filter(node => node.type === 'question' && !hasIncomingEdges.has(node.id));
+          if (startQuestionNodes.length > 0) {
+            defaultFlowStartNodeId = startQuestionNodes[0].id;
+          } else {
+            const anyQuestion = questionFlow.find(node => node.type === 'question');
+            if (anyQuestion) {
+              defaultFlowStartNodeId = anyQuestion.id;
+            } else {
+              defaultFlowStartNodeId = questionFlow.length > 0 ? questionFlow[0].id : 'supportType';
+            }
+          }
+          console.log('HelpWidget: Default flow loaded, replacing fallback with:', flow.length, 'nodes');
+        }
+      });
+    }
   }
 
   /**
@@ -1102,30 +1042,13 @@
       renderContent({ articles: allArticles });
       return;
     }
-    // Remote search
-    searchContent(query);
-  }
-
-  /**
-   * Search for content
-   * @param {string} query - Search query
-   */
-  function searchContent(query) {
-    showLoading();
-    
-    fetch(withRoleParam(`${config.apiBaseUrl}/search?q=${encodeURIComponent(query)}`), {
-      headers: {
-        'X-API-Key': config.apiKey,
-      },
-    })
-    .then(response => response.json())
-    .then(data => {
-      renderContent(data);
-    })
-    .catch(error => {
-      console.error('HelpWidget: Search failed', error);
-      showError('Search failed');
+    // Client-side search: filter cached articles
+    const filtered = allArticles.filter(article => {
+      const title = article.title ? article.title.toLowerCase() : '';
+      const content = article.content ? article.content.toLowerCase() : '';
+      return title.includes(query) || content.includes(query);
     });
+    renderContent({ articles: filtered });
   }
 
   /**
