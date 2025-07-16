@@ -86,9 +86,14 @@ export default function AdminArticlesPage() {
             <h1 className="text-3xl font-bold text-foreground">Articles</h1>
             <p className="text-muted-foreground mt-2">Manage your help centre articles</p>
           </div>
-          <Button asChild className="w-full md:w-auto mt-4 md:mt-0">
-            <Link href="/admin/articles/new">Create Article</Link>
-          </Button>
+          <div className="flex gap-2 w-full md:w-auto mt-4 md:mt-0">
+            <Button asChild>
+              <Link href="/admin/articles/feedback">View Feedback</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/admin/articles/new">Create Article</Link>
+            </Button>
+          </div>
         </div>
         
         {loading ? (
