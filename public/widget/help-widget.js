@@ -1924,6 +1924,10 @@
         .help-widget--open .help-widget__sidebar {
           display: flex;
         }
+        /* Prevent iOS zoom on search input */
+        .help-widget__search-input {
+          font-size: 16px !important;
+        }
       }
       /* Browse all articles styles */
       .help-widget__browse-all {
