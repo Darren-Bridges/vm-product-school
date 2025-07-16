@@ -26,8 +26,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Input } from '@/components/ui/input';
 import { WebWidgetFlowForm } from '@/components/WebWidgetFlowForm';
 import { Pencil } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator
+} from '@/components/ui/dropdown-menu';
 import { Dialog as ConfirmDialog, DialogContent as ConfirmDialogContent, DialogHeader as ConfirmDialogHeader, DialogTitle as ConfirmDialogTitle, DialogFooter as ConfirmDialogFooter, DialogClose as ConfirmDialogClose } from '@/components/ui/dialog';
 import type { Edge as ReactFlowEdge } from 'reactflow';
+import { useRouter } from 'next/navigation';
 
 
 type FlowDB = {
@@ -97,6 +106,13 @@ function FlowEditorInner() {
 
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
+  const router = useRouter();
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const [duplicateLoading, setDuplicateLoading] = useState(false);
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
+  const [deleteFlowDialogOpen, setDeleteFlowDialogOpen] = useState(false);
+  const [deleteFlowLoading, setDeleteFlowLoading] = useState(false);
+  const [deleteFlowError, setDeleteFlowError] = useState<string | null>(null);
 
   // Helper to push current state to history
   const pushToHistory = useCallback(() => {
@@ -594,6 +610,64 @@ function FlowEditorInner() {
     setContextMenu(null);
   };
 
+  // Duplicate flow handler
+  const handleDuplicateFlow = async ({ name, slug }: { name: string; slug: string }) => {
+    if (!flow) return;
+    setDuplicateLoading(true);
+    setDuplicateError(null);
+    // Check for unique slug
+    const { data: existing, error: fetchError } = await supabase
+      .from('web_widget_flows')
+      .select('id')
+      .eq('slug', slug)
+      .maybeSingle();
+    if (fetchError) {
+      setDuplicateError(fetchError.message);
+      setDuplicateLoading(false);
+      return;
+    }
+    if (existing) {
+      setDuplicateError('A flow with this slug already exists.');
+      setDuplicateLoading(false);
+      return;
+    }
+    // Insert new flow with copied data
+    const { data: newFlow, error: insertError } = await supabase
+      .from('web_widget_flows')
+      .insert([
+        { name, slug, flow_data: flow.flow_data }
+      ])
+      .select()
+      .single();
+    if (insertError) {
+      setDuplicateError(insertError.message);
+      setDuplicateLoading(false);
+      return;
+    }
+    setDuplicateLoading(false);
+    setDuplicateDialogOpen(false);
+    router.push(`/admin/web-widget/${newFlow.slug}`);
+  };
+
+  // Delete flow handler
+  const handleDeleteFlow = async () => {
+    if (!flow) return;
+    setDeleteFlowLoading(true);
+    setDeleteFlowError(null);
+    const { error } = await supabase
+      .from('web_widget_flows')
+      .delete()
+      .eq('id', flow.id);
+    if (error) {
+      setDeleteFlowError(error.message);
+      setDeleteFlowLoading(false);
+      return;
+    }
+    setDeleteFlowLoading(false);
+    setDeleteFlowDialogOpen(false);
+    router.push('/admin/web-widget');
+  };
+
   if (loading) {
     return <div className="p-8">Loading…</div>;
   }
@@ -617,19 +691,43 @@ function FlowEditorInner() {
           </div>
         )}
         {flow && (
-          <div className="mb-6 max-w-xl">
+          <div className="mb-6 w-full">
             {!editDetails ? (
-              <div className="flex items-center gap-2">
-                <h1 className="text-3xl font-bold mb-2">{flow.name}</h1>
-                <button
-                  type="button"
-                  className="text-muted-foreground hover:text-foreground p-1"
-                  aria-label="Edit flow details"
-                  onClick={() => setEditDetails(true)}
-                >
-                  <Pencil size={20} />
-                </button>
-                <span className="ml-4 text-muted-foreground">Slug: <span className="font-mono">{flow.slug}</span></span>
+              <div className="flex items-start justify-between mb-2 w-full">
+                <div className="flex items-center gap-3 min-w-0 flex-shrink">
+                  <h1 className="text-3xl font-bold truncate max-w-xs md:max-w-md lg:max-w-xl">{flow.name}</h1>
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground p-1"
+                    aria-label="Edit flow details"
+                    onClick={() => setEditDetails(true)}
+                  >
+                    <Pencil size={20} />
+                  </button>
+                  <span className="text-muted-foreground truncate">Slug: <span className="font-mono">{flow.slug}</span></span>
+                </div>
+                <div className="flex gap-2 items-center flex-shrink-0 ml-auto">
+                  <Button onClick={handleSave} disabled={saving} className="px-6 py-2">
+                    {saving ? 'Saving…' : 'Save Flow'}
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="icon" className="px-2 py-2"><MoreHorizontal className="w-5 h-5" /></Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={handleSetAsDefault} disabled={isDefault || settingDefault}>
+                        {settingDefault ? 'Setting as Default...' : 'Set as Default'}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setDuplicateDialogOpen(true)}>
+                        Duplicate Flow
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setDeleteFlowDialogOpen(true)} disabled={isDefault} className="text-red-600 focus:text-red-600">
+                        Delete Flow
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             ) : (
               <WebWidgetFlowForm
@@ -652,27 +750,6 @@ function FlowEditorInner() {
             )}
           </div>
         )}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            {/* <h1 className="text-3xl font-bold mb-2">Edit Flow: {flow?.name}</h1> */}
-            {/* <p className="text-muted-foreground">Slug: {flow?.slug}</p> */}
-          </div>
-          <div className="flex gap-2">
-            {!isDefault && (
-              <Button 
-                onClick={handleSetAsDefault} 
-                disabled={settingDefault} 
-                variant="outline"
-                className="px-4 py-2"
-              >
-                {settingDefault ? 'Setting...' : 'Set as Default'}
-              </Button>
-            )}
-            <Button onClick={handleSave} disabled={saving} className="px-6 py-2">
-              {saving ? 'Saving…' : 'Save Flow'}
-            </Button>
-          </div>
-        </div>
         {/* Undo/Redo Buttons */}
         <div className="flex gap-2 mb-2">
           <Button variant="outline" onClick={handleUndo} disabled={history.length === 0}>Undo</Button>
@@ -987,6 +1064,40 @@ function FlowEditorInner() {
           </ConfirmDialogContent>
         </ConfirmDialog>
         {/* End Delete Confirmation Dialog */}
+        {/* Duplicate Flow Dialog */}
+        <Dialog open={duplicateDialogOpen} onOpenChange={setDuplicateDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Duplicate Flow</DialogTitle>
+            </DialogHeader>
+            <WebWidgetFlowForm
+              initialName={flow?.name ? `${flow.name} Copy` : ''}
+              initialSlug={flow?.slug ? `${flow.slug}-copy` : ''}
+              loading={duplicateLoading}
+              error={duplicateError}
+              submitLabel="Duplicate"
+              onSubmit={handleDuplicateFlow}
+            />
+          </DialogContent>
+        </Dialog>
+        {/* Delete Flow Dialog */}
+        <Dialog open={deleteFlowDialogOpen} onOpenChange={setDeleteFlowDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Flow</DialogTitle>
+            </DialogHeader>
+            <div className="mb-4">Are you sure you want to delete this flow? This cannot be undone.</div>
+            {deleteFlowError && <div className="text-red-600 text-sm mb-2">{deleteFlowError}</div>}
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="outline" disabled={deleteFlowLoading}>Cancel</Button>
+              </DialogClose>
+              <Button type="button" variant="destructive" onClick={handleDeleteFlow} disabled={deleteFlowLoading}>
+                {deleteFlowLoading ? 'Deleting…' : 'Delete'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );
