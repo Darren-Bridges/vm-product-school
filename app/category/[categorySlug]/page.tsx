@@ -7,6 +7,7 @@ import { Skeleton } from "../../../components/ui/skeleton";
 import { dataCache } from '../../../utils/dataCache';
 import { CategorySidebar, CategorySidebarMobile } from "@/components/CategorySidebar";
 import { FileText } from "lucide-react";
+import { useAuth } from "../../../context/AuthContext";
 
 interface Category {
   id: string;
@@ -43,13 +44,15 @@ export default function CategoryPage() {
   const [categoryTree, setCategoryTree] = useState<CategoryTreeNode | null>(null);
   const [expanded, setExpanded] = useState<{ [id: string]: boolean }>({});
   const [allCategoryTrees, setAllCategoryTrees] = useState<CategoryTreeNode[]>([]);
+  const { user, isSuperAdmin, userReady } = useAuth();
 
   useEffect(() => {
     const fetchCategory = async () => {
       setLoading(true);
       setNotFound(false);
       let categories = dataCache.getCategories();
-      let articles = dataCache.getArticles();
+      const userId = user ? user.email : null;
+      let articles = dataCache.getArticles(userId, isSuperAdmin);
       let articleCategories = dataCache.getArticleCategories();
       if (!categories) {
         const { data, error } = await supabase
@@ -68,7 +71,7 @@ export default function CategoryPage() {
           .eq("status", "published");
         if (!error && data) {
           articles = data;
-          dataCache.setArticles(data);
+          dataCache.setArticles(data, userId, isSuperAdmin);
         }
       }
       if (!articleCategories) {
@@ -112,8 +115,8 @@ export default function CategoryPage() {
       setAllCategoryTrees(rootCategories.map(buildTree));
       setLoading(false);
     };
-    if (categorySlug) fetchCategory();
-  }, [categorySlug]);
+    if (categorySlug && userReady) fetchCategory();
+  }, [categorySlug, user, isSuperAdmin, userReady]);
 
   if (loading) {
     return (

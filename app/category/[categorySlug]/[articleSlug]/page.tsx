@@ -38,7 +38,7 @@ export default function CategoryArticlePage() {
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const { user, isSuperAdmin } = useAuth();
+  const { user, isSuperAdmin, userReady } = useAuth();
   const [allCategoryTrees, setAllCategoryTrees] = useState<CategoryTreeNode[]>([]);
 
   useEffect(() => {
@@ -46,7 +46,8 @@ export default function CategoryArticlePage() {
       setLoading(true);
       setNotFound(false);
       let categories = dataCache.getCategories();
-      let articles = dataCache.getArticles();
+      const userId = user ? user.email : null;
+      let articles = dataCache.getArticles(userId, isSuperAdmin);
       let articleCategories = dataCache.getArticleCategories();
       const allowedAccess = getArticleAccessFilter(user, isSuperAdmin);
       if (!categories) {
@@ -66,7 +67,7 @@ export default function CategoryArticlePage() {
           .in("access_level", allowedAccess);
         if (!error && data) {
           articles = data;
-          dataCache.setArticles(data);
+          dataCache.setArticles(data, userId, isSuperAdmin);
         }
       }
       if (!articleCategories) {
@@ -114,8 +115,8 @@ export default function CategoryArticlePage() {
       setAllCategoryTrees(rootCategories.map(buildTree));
       setLoading(false);
     };
-    if (categorySlug && articleSlug) fetchData();
-  }, [categorySlug, articleSlug, user, isSuperAdmin]);
+    if (categorySlug && articleSlug && userReady) fetchData();
+  }, [categorySlug, articleSlug, user, isSuperAdmin, userReady]);
 
   if (loading) {
     return (

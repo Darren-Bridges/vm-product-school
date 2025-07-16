@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
@@ -34,7 +34,6 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [searchResults, setSearchResults] = useState<Article[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
-  const searchTimeout = useRef<NodeJS.Timeout | null>(null);
   const [whatsNew, setWhatsNew] = useState<Article[]>([]);
   const [accessibleArticles, setAccessibleArticles] = useState<Article[]>([]);
   const [articleCategories, setArticleCategories] = useState<{ article_id: string, category_id: string }[]>([]);
