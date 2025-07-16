@@ -67,7 +67,15 @@ export default function CreateArticlePage() {
       const { data: articleData, error: articleError } = await supabase
         .from("articles")
         .insert([
-          { title, slug, content, status, access_level: accessLevel, author: user?.email || "", path }
+          { 
+            title, 
+            slug, 
+            content, 
+            status, 
+            access_level: accessLevel, 
+            author: user?.email || "", 
+            path: path.trim() === "" ? null : path // <-- this line
+          }
         ])
         .select()
         .single();
