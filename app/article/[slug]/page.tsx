@@ -9,7 +9,6 @@ import { dataCache } from '../../../utils/dataCache';
 import { useAuth } from "../../../context/AuthContext";
 import { getArticleAccessFilter } from "../../../utils/accessControl";
 import { CategorySidebar, CategorySidebarMobile, CategoryTreeNode } from "@/components/CategorySidebar";
-import { useRouter } from "next/navigation";
 
 interface Article {
   id: string;
@@ -47,7 +46,6 @@ export default function ArticlePage() {
   const [notFound, setNotFound] = useState(false);
   const { user, isSuperAdmin, userReady } = useAuth();
   const [allCategoryTrees, setAllCategoryTrees] = useState<CategoryTreeNode[]>([]);
-  const router = useRouter();
   // Feedback state
   const [feedbackState, setFeedbackState] = useState<'idle'|'yes'|'no'|'submitted'>('idle');
   const [feedbackReason, setFeedbackReason] = useState('');
@@ -222,7 +220,7 @@ export default function ArticlePage() {
                       });
                       if (!res.ok) throw new Error('Failed to submit feedback');
                       setFeedbackState('submitted');
-                    } catch (e) {
+                    } catch {
                       setFeedbackError('Could not submit feedback.');
                     } finally {
                       setFeedbackLoading(false);
@@ -241,8 +239,7 @@ export default function ArticlePage() {
               </div>
               {feedbackState === 'no' && (
                 <form
-                  onSubmit={async (e) => {
-                    e.preventDefault();
+                  onSubmit={async () => {
                     setFeedbackLoading(true);
                     setFeedbackError(null);
                     try {
@@ -262,7 +259,7 @@ export default function ArticlePage() {
                       });
                       if (!res.ok) throw new Error('Failed to submit feedback');
                       setFeedbackState('submitted');
-                    } catch (e) {
+                    } catch {
                       setFeedbackError('Could not submit feedback.');
                     } finally {
                       setFeedbackLoading(false);
