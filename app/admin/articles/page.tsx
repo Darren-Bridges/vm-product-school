@@ -8,6 +8,7 @@ import { ProtectedAdminLayout } from "../../../components/ProtectedAdminLayout";
 import { DataTable } from "@/components/ui/data-table";
 import { columns, Article } from "./columns";
 import Link from "next/link";
+import { MessageSquare } from "lucide-react";
 
 export default function AdminArticlesPage() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -87,8 +88,8 @@ export default function AdminArticlesPage() {
             <p className="text-muted-foreground mt-2">Manage your help centre articles</p>
           </div>
           <div className="flex gap-2 w-full md:w-auto mt-4 md:mt-0">
-            <Button asChild>
-              <Link href="/admin/articles/feedback">View Feedback</Link>
+            <Button asChild variant="secondary" className="flex items-center gap-2">
+              <Link href="/admin/articles/feedback"><MessageSquare className="w-4 h-4" /> View Feedback</Link>
             </Button>
             <Button asChild>
               <Link href="/admin/articles/new">Create Article</Link>
