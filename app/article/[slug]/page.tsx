@@ -176,7 +176,7 @@ export default function ArticlePage() {
         trees={allCategoryTrees}
         currentArticleSlug={slug}
       />
-      <main className="flex-1 px-8 md:px-16">
+      <main className="flex-1 px-2 md:px-16">
         <CategorySidebarMobile
           trees={allCategoryTrees}
           currentArticleSlug={slug}
