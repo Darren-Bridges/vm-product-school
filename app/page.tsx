@@ -28,6 +28,25 @@ interface Article {
   category_id?: string;
 }
 
+// Add fuzzyScore helper
+function fuzzyScore(needle: string, haystack: string): number {
+  if (!needle) return 0;
+  if (!haystack) return 0;
+  needle = needle.toLowerCase();
+  haystack = haystack.toLowerCase();
+  if (needle === haystack) return 100;
+  if (haystack.startsWith(needle)) return 90;
+  if (haystack.includes(needle)) return 75;
+  let hIdx = 0, gaps = 0;
+  for (let nIdx = 0; nIdx < needle.length; nIdx++) {
+    hIdx = haystack.indexOf(needle[nIdx], hIdx);
+    if (hIdx === -1) return 0;
+    if (nIdx > 0 && hIdx > 0) gaps += hIdx;
+    hIdx++;
+  }
+  return Math.max(50 - gaps, 1);
+}
+
 export default function Home() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [search, setSearch] = useState("");
@@ -114,8 +133,18 @@ export default function Home() {
       setShowDropdown(false);
       return;
     }
-    const filtered = accessibleArticles.filter(a => a.title.toLowerCase().includes(search.toLowerCase()));
-    setSearchResults(filtered.slice(0, 5));
+    // Fuzzy search and sort
+    const scored = accessibleArticles.map(a => {
+      const title = a.title || '';
+      const content = a.content || '';
+      let score = 0;
+      score += fuzzyScore(search, title) * 2;
+      score += fuzzyScore(search, content);
+      return { article: a, score };
+    }).filter(item => item.score > 0);
+    scored.sort((a, b) => b.score - a.score);
+    const filtered = scored.map(item => item.article).slice(0, 5);
+    setSearchResults(filtered);
     setShowDropdown(filtered.length > 0);
   }, [search, accessibleArticles]);
 

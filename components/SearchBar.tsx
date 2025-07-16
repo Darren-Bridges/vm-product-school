@@ -20,13 +20,50 @@ interface SearchBarProps {
   className?: string;
 }
 
+// Add fuzzyScore helper
+function fuzzyScore(needle: string, haystack: string): number {
+  if (!needle) return 0;
+  if (!haystack) return 0;
+  needle = needle.toLowerCase();
+  haystack = haystack.toLowerCase();
+  if (needle === haystack) return 100;
+  if (haystack.startsWith(needle)) return 90;
+  if (haystack.includes(needle)) return 75;
+  let hIdx = 0, gaps = 0;
+  for (let nIdx = 0; nIdx < needle.length; nIdx++) {
+    hIdx = haystack.indexOf(needle[nIdx], hIdx);
+    if (hIdx === -1) return 0;
+    if (nIdx > 0 && hIdx > 0) gaps += hIdx;
+    hIdx++;
+  }
+  return Math.max(50 - gaps, 1);
+}
+
 export function SearchBar({ className }: SearchBarProps) {
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<Article[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [allArticles, setAllArticles] = useState<Article[]>([]);
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { user, isSuperAdmin } = useAuth();
+
+  // Fetch all accessible articles once per session/user
+  useEffect(() => {
+    if (user === undefined || isSuperAdmin === undefined) return;
+    const allowedAccess = getArticleAccessFilter(user, isSuperAdmin);
+    supabase
+      .from("articles")
+      .select("id, title, slug, status, content, access_level")
+      .in("access_level", allowedAccess)
+      .then(({ data, error }) => {
+        if (!error && data) {
+          setAllArticles(data);
+        } else {
+          setAllArticles([]);
+        }
+      });
+  }, [user, isSuperAdmin]);
 
   // Keyboard shortcut handler
   useEffect(() => {
@@ -41,7 +78,7 @@ export function SearchBar({ className }: SearchBarProps) {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Live search with debounce
+  // Fuzzy search and ranking in-memory
   useEffect(() => {
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
     if (!search) {
@@ -49,28 +86,26 @@ export function SearchBar({ className }: SearchBarProps) {
       setShowDropdown(false);
       return;
     }
-    const allowedAccess = getArticleAccessFilter(user, isSuperAdmin);
-    searchTimeout.current = setTimeout(async () => {
-      const query = supabase
-        .from("articles")
-        .select("id, title, slug, status, content, access_level")
-        .ilike("title", `%${search}%`)
-        .in("access_level", allowedAccess)
-        .limit(5);
-      const { data, error } = await query;
-      if (!error && data) {
-        setSearchResults(data);
-        setShowDropdown(true);
-      } else {
-        setSearchResults([]);
-        setShowDropdown(false);
-      }
+    searchTimeout.current = setTimeout(() => {
+      // Fuzzy search and sort
+      const scored = allArticles.map((a: Article) => {
+        const title = a.title || '';
+        const content = a.content || '';
+        let score = 0;
+        score += fuzzyScore(search, title) * 2;
+        score += fuzzyScore(search, content);
+        return { article: a, score };
+      }).filter(item => item.score > 0);
+      scored.sort((a, b) => b.score - a.score);
+      const filtered = scored.map(item => item.article).slice(0, 5);
+      setSearchResults(filtered);
+      setShowDropdown(filtered.length > 0);
     }, 300);
     // Cleanup
     return () => {
       if (searchTimeout.current) clearTimeout(searchTimeout.current);
     };
-  }, [search, user, isSuperAdmin]);
+  }, [search, allArticles]);
 
   return (
     <div className={`relative ${className}`}>
