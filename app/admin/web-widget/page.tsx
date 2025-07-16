@@ -10,6 +10,10 @@ import { DataTable } from '@/components/ui/data-table';
 import { columns, Flow } from './columns';
 
 export default function WebWidgetFlowsListPage() {
+  useEffect(() => {
+    document.title = "Web Widget Flows | Admin | VM Product School";
+  }, []);
+
   const [flows, setFlows] = useState<Flow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

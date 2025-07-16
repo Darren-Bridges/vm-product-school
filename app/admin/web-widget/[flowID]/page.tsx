@@ -350,6 +350,12 @@ function FlowEditorInner() {
     // eslint-disable-next-line
   }, [slug]);
 
+  useEffect(() => {
+    if (flow && flow.name) {
+      document.title = `${flow.name} | Web Widget Flow | Admin | VM Product School`;
+    }
+  }, [flow]);
+
   const getNodeStyleByType = (type: string): React.CSSProperties => {
     if (type === 'question') {
       return {

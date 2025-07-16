@@ -40,6 +40,9 @@ let roadmapCache: { items: RoadmapItem[]; timestamp: number } | null = null;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in ms
 
 export default function RoadmapPage() {
+  useEffect(() => {
+    document.title = "Product Roadmap | VM Product School";
+  }, []);
   const { user } = useAuth();
   const router = useRouter();
   // Redirect if not logged in

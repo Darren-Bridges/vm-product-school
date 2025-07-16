@@ -118,6 +118,12 @@ export default function CategoryPage() {
     if (categorySlug && userReady) fetchCategory();
   }, [categorySlug, user, isSuperAdmin, userReady]);
 
+  useEffect(() => {
+    if (category && category.name) {
+      document.title = `${category.name} | VM Product School`;
+    }
+  }, [category]);
+
   if (loading) {
     return (
       <div className="max-w-5xl mx-auto mt-20 p-8">

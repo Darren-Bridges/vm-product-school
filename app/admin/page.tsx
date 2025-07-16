@@ -8,6 +8,10 @@ import { FileText, FolderOpen, PlayCircle, Users } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminPage() {
+  useEffect(() => {
+    document.title = "Admin Dashboard | VM Product School";
+  }, []);
+
   const [stats, setStats] = useState({
     articles: 0,
     categories: 0,

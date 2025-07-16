@@ -48,6 +48,9 @@ function fuzzyScore(needle: string, haystack: string): number {
 }
 
 export default function Home() {
+  useEffect(() => {
+    document.title = "Help Centre | VM Product School";
+  }, []);
   const [categories, setCategories] = useState<Category[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);

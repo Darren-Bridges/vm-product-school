@@ -40,6 +40,10 @@ interface Article {
 }
 
 export default function CategoriesPage() {
+  useEffect(() => {
+    document.title = "Categories | Admin | VM Product School";
+  }, []);
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);

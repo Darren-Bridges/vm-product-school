@@ -179,6 +179,12 @@ export default function EditArticlePage() {
     }
   }, [title, slugManuallyEdited]);
 
+  useEffect(() => {
+    if (title) {
+      document.title = `${title} | Article | Admin | VM Product School`;
+    }
+  }, [title]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);

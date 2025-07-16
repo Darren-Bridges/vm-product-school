@@ -11,6 +11,10 @@ import Link from "next/link";
 import { MessageSquare } from "lucide-react";
 
 export default function AdminArticlesPage() {
+  useEffect(() => {
+    document.title = "Articles | Admin | VM Product School";
+  }, []);
+
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

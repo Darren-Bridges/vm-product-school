@@ -146,6 +146,12 @@ export default function ArticlePage() {
     if (slug) fetchArticle();
   }, [slug, user, isSuperAdmin, userReady]);
 
+  useEffect(() => {
+    if (article && article.title) {
+      document.title = `${article.title} | VM Product School`;
+    }
+  }, [article]);
+
   if (loading || !userReady) {
     return (
       <div className="flex w-full mt-20 gap-8 p-4 md:p-8">

@@ -53,6 +53,10 @@ interface SupabaseRoadmapItem {
 }
 
 export default function RoadmapAdminPage() {
+  useEffect(() => {
+    document.title = "Roadmap | Admin | VM Product School";
+  }, []);
+
   const [roadmapItems, setRoadmapItems] = useState<RoadmapItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
