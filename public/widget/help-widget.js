@@ -69,7 +69,7 @@
             const base = {
               id: n.id,
               question: n.data && n.data.label ? n.data.label : n.id,
-              options: outgoing.map(e => ({ label: e.label || 'Option', next: e.target })),
+              options: outgoing.map(e => ({ label: e.label || 'Option', next: e.target, optionType: e.optionType || 'static', inputPlaceholder: e.inputPlaceholder || '' })),
               type: n.type || (n.data && n.data.type) || 'question',
               articleId: n.data && n.data.articleId ? n.data.articleId : undefined,
               flowId: n.data && n.data.flowId ? n.data.flowId : undefined,
@@ -123,7 +123,7 @@
           const base = {
             id: n.id,
             question: n.data && n.data.label ? n.data.label : n.id,
-            options: outgoing.map(e => ({ label: e.label || 'Option', next: e.target })),
+            options: outgoing.map(e => ({ label: e.label || 'Option', next: e.target, optionType: e.optionType || 'static', inputPlaceholder: e.inputPlaceholder || '' })),
             type: n.type || (n.data && n.data.type) || 'question',
             articleId: n.data && n.data.articleId ? n.data.articleId : undefined,
             flowId: n.data && n.data.flowId ? n.data.flowId : undefined,
@@ -212,7 +212,7 @@
             const base = {
               id: n.id,
               question: n.data && n.data.label ? n.data.label : n.id,
-              options: outgoing.map(e => ({ label: e.label || 'Option', next: e.target })),
+              options: outgoing.map(e => ({ label: e.label || 'Option', next: e.target, optionType: e.optionType || 'static', inputPlaceholder: e.inputPlaceholder || '' })),
               type: n.type || (n.data && n.data.type) || 'question',
               articleId: n.data && n.data.articleId ? n.data.articleId : undefined,
               flowId: n.data && n.data.flowId ? n.data.flowId : undefined,
@@ -271,13 +271,54 @@
     if (q.options) {
       html += '<div style="display:flex;flex-direction:column;gap:10px;">';
       q.options.forEach((opt, idx) => {
-        html += `<button class="help-widget__question-option" data-next="${opt.next}" data-label="${opt.label}" style="padding:10px 12px;background:#8C4FFB;color:#fff;border:none;border-radius:4px;font-size:1rem;font-weight:500;cursor:pointer;">${opt.label}</button>`;
+        if (opt.optionType === 'input') {
+          html += `<div class="help-widget__question-input-form" data-next="${opt.next}" style="display:flex;flex-direction:column;gap:8px;align-items:stretch;">
+            <input class="help-widget__question-input" type="text" placeholder="${opt.inputPlaceholder || 'Your answer'}" style="padding:8px 10px;border-radius:4px;border:1.5px solid #8C4FFB;font-size:1rem;" />
+            <button type="button" class="help-widget__question-input-submit" style="margin-top:4px;padding:8px 14px;background:#8C4FFB;color:#fff;border:none;border-radius:4px;font-size:1rem;font-weight:500;cursor:pointer;">Submit</button>
+          </div>`;
+        } else {
+          html += `<button class="help-widget__question-option" data-next="${opt.next}" data-label="${opt.label}" style="padding:10px 12px;background:#8C4FFB;color:#fff;border:none;border-radius:4px;font-size:1rem;font-weight:500;cursor:pointer;">${opt.label}</button>`;
+        }
       });
       html += '</div>';
     }
 
     html += '</div>';
     elements.content.innerHTML = html;
+    console.log('Rendered HTML:', elements.content.innerHTML);
+    // Use a more general selector to find input field containers
+    if (elements.content) {
+      const inputDivs = elements.content.querySelectorAll('div[data-next]');
+      console.log('Found inputDivs:', inputDivs.length);
+      inputDivs.forEach(div => {
+        const input = div.querySelector('input');
+        const button = div.querySelector('button');
+        const next = div.getAttribute('data-next');
+        const thisStepId = questionFlowState.currentId;
+        if (!input || !button) {
+          console.log('No input or button found in div:', div);
+          return;
+        }
+        button.addEventListener('click', () => {
+          console.log('Submit button clicked for input field step', thisStepId, 'next:', next);
+          const value = input.value.trim();
+          if (!value) {
+            console.log('No value entered');
+            return;
+          }
+          questionFlowState.history.push(thisStepId);
+          questionFlowState.answers.push({ id: thisStepId, answer: value });
+          console.log('Advancing to next step:', next);
+          renderQuestionFlow(next);
+        });
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            button.click();
+          }
+        });
+      });
+    }
     // Back to list
     const backBtn = elements.content.querySelector('.help-widget__back-to-list');
     if (backBtn) {
@@ -913,6 +954,10 @@
     // Close on outside click
     document.addEventListener('click', (e) => {
       if (state.isOpen && !elements.container.contains(e.target)) {
+        // If the support form is open, do NOT close the sidebar
+        if (elements.content && elements.content.querySelector('.help-widget__support-form')) {
+          return;
+        }
         closeSidebar();
       }
     });
