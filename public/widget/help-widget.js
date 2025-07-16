@@ -1254,66 +1254,84 @@
       });
     }
 
-    // In renderArticleContent, after the back button logic, add:
-    if (questionFlow && questionFlow.length > 0 && state.activeTab !== 'help') {
-      const articleView = elements.content.querySelector('.help-widget__article-view');
-      const restartBtn = document.createElement('button');
-      restartBtn.setAttribute('type', 'button');
-      restartBtn.setAttribute('aria-label', 'Restart flow');
-      restartBtn.setAttribute('title', 'Restart flow');
-      restartBtn.className = 'help-widget__flow-restart-btn';
-      restartBtn.style = [
-        'position: absolute',
-        'top: 0',
-        'right: 0',
-        'background: transparent',
-        'border: none',
-        'color: #8C4FFB',
-        'font-size: 1.02rem',
-        'font-weight: 600',
-        'border-radius: 6px',
-        'padding: 4px 8px 4px 4px',
-        'cursor: pointer',
-        'transition: background 0.15s, color 0.15s, box-shadow 0.15s',
-        'outline: none',
-        'display: flex',
-        'align-items: center',
-        'gap: 4px',
-        'z-index: 10',
-      ].join(';');
-      restartBtn.onmouseover = function() {
-        restartBtn.style.background = '#f3f0ff';
-        restartBtn.style.color = '#6d28d9';
-        restartBtn.style.boxShadow = '0 1px 4px rgba(140,79,251,0.08)';
-      };
-      restartBtn.onmouseout = function() {
-        restartBtn.style.background = 'transparent';
-        restartBtn.style.color = '#8C4FFB';
-        restartBtn.style.boxShadow = 'none';
-      };
-      restartBtn.innerHTML = `
-        <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 12v-2a4 4 0 0 1 4-4h10\"/><path d=\"M21 12v2a4 4 0 0 1-4 4H7\"/><path d=\"M9 17l-2 2 2 2\"/><path d=\"M15 7l2-2-2-2\"/></svg>
-        <span style=\"font-size:0.98rem;font-weight:600;\">Restart</span>
-      `;
-      restartBtn.onclick = function() {
-        questionFlowState.history = [];
-        questionFlowState.answers = [];
-        if (defaultQuestionFlow) {
-          questionFlow = defaultQuestionFlow;
+    // --- BEGIN: In-article link navigation ---
+    const articleContentDiv = elements.content.querySelector('.help-widget__article-content');
+    if (articleContentDiv) {
+      // Remove any previous handler
+      if (articleContentDiv._internalLinkHandler) {
+        articleContentDiv.removeEventListener('click', articleContentDiv._internalLinkHandler, true);
+      }
+      // Define the handler
+      const internalLinkHandler = function(e) {
+        // Only handle anchor clicks
+        const link = e.target.closest('a');
+        if (!link) return;
+        // Only handle left click, no modifier keys
+        if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        const href = link.getAttribute('href');
+        // Debug log
+        console.log('HelpWidget: article link clicked', href, link);
+        // If link has data-article-id, treat as internal article link
+        const dataArticleId = link.getAttribute('data-article-id');
+        if (dataArticleId) {
+          console.log('HelpWidget: Handling as internal article by data-article-id', dataArticleId);
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          link.removeAttribute('target');
+          // Fallback: forcibly break navigation
+          setTimeout(() => { window.location.hash = '#helpwidget-blocked'; }, 0);
+          loadArticleContent(dataArticleId);
+          return;
         }
-        let startId = defaultFlowStartNodeId || getFlowStartNodeId();
-        let startNode = questionFlow.find(n => n.id === startId);
-        if (!startNode || startNode.type !== 'question') {
-          // Fallback: find any question node
-          const anyQuestion = questionFlow.find(n => n.type === 'question');
-          if (anyQuestion) startId = anyQuestion.id;
+        // Log all article paths and slugs for debugging
+        if (allArticles && allArticles.length > 0) {
+          console.log('HelpWidget: allArticles paths:', allArticles.map(a => a.path));
+          console.log('HelpWidget: allArticles slugs:', allArticles.map(a => a.slug));
         }
-        renderQuestionFlow(startId);
+        // Try to match href to an article path (even if target/rel is set)
+        if (href && allArticles && allArticles.length > 0) {
+          // Normalize href (remove origin if present)
+          let normalizedHref = href;
+          try {
+            const url = new URL(href, window.location.origin);
+            normalizedHref = url.pathname;
+          } catch {}
+          // Try to match full path
+          let match = allArticles.find(a => a.path && a.path === normalizedHref);
+          // Try to match by slug if not found
+          if (!match) {
+            // Extract last part of the path as slug
+            const slug = normalizedHref.split('/').filter(Boolean).pop();
+            match = allArticles.find(a => a.slug && a.slug === slug);
+          }
+          if (match) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            link.removeAttribute('target');
+            setTimeout(() => { window.location.hash = '#helpwidget-blocked'; }, 0);
+            loadArticleContent(match.id);
+            return;
+          }
+        }
+        // If external (http/https and not our domain), open in new tab
+        if (href && /^https?:\/\//.test(href)) {
+          const isSameOrigin = href.startsWith(window.location.origin);
+          if (!isSameOrigin) {
+            console.log('HelpWidget: External link, opening in new tab');
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            // Let default happen
+            return;
+          }
+        }
+        // Otherwise, let default happen
+        console.log('HelpWidget: Letting default happen for link', href);
       };
-      // Ensure the article view is relatively positioned for absolute child
-      articleView.style.position = 'relative';
-      articleView.appendChild(restartBtn);
+      // Attach in capture phase
+      articleContentDiv.addEventListener('click', internalLinkHandler, true);
+      articleContentDiv._internalLinkHandler = internalLinkHandler;
     }
+    // --- END: In-article link navigation ---
   }
 
   /**
