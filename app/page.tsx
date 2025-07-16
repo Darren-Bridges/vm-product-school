@@ -38,7 +38,7 @@ export default function Home() {
   const [whatsNew, setWhatsNew] = useState<Article[]>([]);
   const [accessibleArticles, setAccessibleArticles] = useState<Article[]>([]);
   const [articleCategories, setArticleCategories] = useState<{ article_id: string, category_id: string }[]>([]);
-  const { user, isSuperAdmin } = useAuth();
+  const { user, isSuperAdmin, userReady } = useAuth();
 
 
   useEffect(() => {
@@ -76,10 +76,12 @@ export default function Home() {
 
   useEffect(() => {
     // Only fetch articles when user context is ready
-    if (user === undefined || isSuperAdmin === undefined) return;
+    if (!userReady || user === undefined || isSuperAdmin === undefined) return;
+    setLoading(true);
     // Fetch all articles for search and what's new, filtered by access
     const fetchArticles = async () => {
-      let articles = dataCache.getArticles();
+      const userId = user ? user.email : null;
+      let articles = dataCache.getArticles(userId, isSuperAdmin);
       const allowedAccess = getArticleAccessFilter(user, isSuperAdmin);
       if (!articles) {
         const { data, error } = await supabase
@@ -88,7 +90,7 @@ export default function Home() {
           .in("access_level", allowedAccess);
         if (!error && data) {
           articles = data;
-          dataCache.setArticles(data);
+          dataCache.setArticles(data, userId, isSuperAdmin);
         }
       }
       if (articles) {
@@ -100,47 +102,23 @@ export default function Home() {
             .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
             .slice(0, 5)
         );
-        // For search, filter by search term
-        if (search) {
-          const filtered = articles.filter(a => a.title.toLowerCase().includes(search.toLowerCase()));
-          setSearchResults(filtered.slice(0, 5));
-          setShowDropdown(filtered.length > 0);
-        }
       }
+      setLoading(false);
     };
     fetchArticles();
-  }, [search, user, isSuperAdmin]);
+  }, [user, isSuperAdmin, userReady]);
 
-  // Live search with debounce
+  // Filter articles for search in a separate effect
   useEffect(() => {
-    if (searchTimeout.current) clearTimeout(searchTimeout.current);
     if (!search) {
       setSearchResults([]);
       setShowDropdown(false);
       return;
     }
-    const allowedAccess = getArticleAccessFilter(user, isSuperAdmin);
-    searchTimeout.current = setTimeout(async () => {
-      const query = supabase
-        .from("articles")
-        .select("id, title, slug, status, content, access_level")
-        .ilike("title", `%${search}%`)
-        .in("access_level", allowedAccess)
-        .limit(5);
-      const { data, error } = await query;
-      if (!error && data) {
-        setSearchResults(data);
-        setShowDropdown(true);
-      } else {
-        setSearchResults([]);
-        setShowDropdown(false);
-      }
-    }, 300);
-    // Cleanup
-    return () => {
-      if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    };
-  }, [search, user, isSuperAdmin]);
+    const filtered = accessibleArticles.filter(a => a.title.toLowerCase().includes(search.toLowerCase()));
+    setSearchResults(filtered.slice(0, 5));
+    setShowDropdown(filtered.length > 0);
+  }, [search, accessibleArticles]);
 
   const accessibleCategoryIds = new Set(
     articleCategories

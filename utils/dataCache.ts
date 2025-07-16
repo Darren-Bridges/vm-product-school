@@ -9,7 +9,7 @@ interface CacheEntry<T> {
 
 class DataCache {
   private categories: CacheEntry<any[]> | null = null;
-  private articles: CacheEntry<any[]> | null = null;
+  private articles: (CacheEntry<any[]> & { userId: string | null, isSuperAdmin: boolean }) | null = null;
   private articleCategories: CacheEntry<any[]> | null = null;
 
   getCategories(): any[] | null {
@@ -27,15 +27,20 @@ class DataCache {
     this.categories = null;
   }
 
-  getArticles(): any[] | null {
-    if (this.articles && Date.now() - this.articles.timestamp < CACHE_DURATION) {
+  getArticles(currentUserId: string | null, isSuperAdmin: boolean): any[] | null {
+    if (
+      this.articles &&
+      Date.now() - this.articles.timestamp < CACHE_DURATION &&
+      this.articles.userId === currentUserId &&
+      this.articles.isSuperAdmin === isSuperAdmin
+    ) {
       return this.articles.data;
     }
     return null;
   }
 
-  setArticles(data: any[]) {
-    this.articles = { data, timestamp: Date.now() };
+  setArticles(data: any[], userId: string | null, isSuperAdmin: boolean) {
+    this.articles = { data, timestamp: Date.now(), userId, isSuperAdmin };
   }
 
   clearArticles() {
