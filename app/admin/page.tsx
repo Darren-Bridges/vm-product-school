@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { ProtectedAdminLayout } from "../../components/ProtectedAdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, FolderOpen, PlayCircle, Users } from "lucide-react";
+import { FileText, FolderOpen, PlayCircle } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminPage() {
@@ -19,6 +19,7 @@ export default function AdminPage() {
     users: 0
   });
   const [loading, setLoading] = useState(true);
+  const [feedbackStats, setFeedbackStats] = useState({ percentGood: 0, total: 0 });
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -33,12 +34,25 @@ export default function AdminPage() {
           .from("categories")
           .select("*", { count: "exact", head: true });
 
-        // For now, tours and users are placeholder values since those tables don't exist yet
+        // Fetch feedback stats
+        const { data: feedbackData, error: feedbackError } = await supabase
+          .from("article_feedback")
+          .select("feedback");
+        let percentGood = 0;
+        if (!feedbackError && feedbackData && feedbackData.length > 0) {
+          const total = feedbackData.length;
+          const good = feedbackData.filter((f: { feedback: string }) => f.feedback === "yes").length;
+          percentGood = Math.round((good / total) * 100);
+          setFeedbackStats({ percentGood, total });
+        } else {
+          setFeedbackStats({ percentGood: 0, total: 0 });
+        }
+
         setStats({
           articles: articlesCount || 0,
           categories: categoriesCount || 0,
-          tours: 0, // Placeholder until tours table is implemented
-          users: 0   // Placeholder until users tracking is implemented
+          tours: 0,
+          users: 0 // No longer used
         });
       } catch (error) {
         console.error("Error fetching stats:", error);
@@ -98,12 +112,12 @@ export default function AdminPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">% Good Feedback</CardTitle>
+              <span className="h-4 w-4 text-muted-foreground font-bold">%</span>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {loading ? "..." : stats.users}
+                {loading ? "..." : `${feedbackStats.percentGood}%`}
               </div>
             </CardContent>
           </Card>
@@ -149,26 +163,15 @@ export default function AdminPage() {
                     <div className="text-sm text-muted-foreground">Product roadmap items</div>
                   </div>
                 </Link>
-                
+
                 <Link
-                  href="/admin/tours"
+                  href="/admin/web-widget/new"
                   className="flex items-center p-4 border rounded-lg hover:bg-accent transition-colors"
                 >
-                  <PlayCircle className="h-5 w-5 mr-3 text-purple-600" />
+                  <div className="h-5 w-5 mr-3 bg-gradient-to-r from-cyan-500 to-blue-500 rounded"></div>
                   <div>
-                    <div className="font-medium">Create Tour</div>
-                    <div className="text-sm text-muted-foreground">Build interactive guides</div>
-                  </div>
-                </Link>
-                
-                <Link
-                  href="/admin/theme"
-                  className="flex items-center p-4 border rounded-lg hover:bg-accent transition-colors"
-                >
-                  <div className="h-5 w-5 mr-3 bg-gradient-to-r from-pink-500 to-orange-500 rounded"></div>
-                  <div>
-                    <div className="font-medium">Customize Theme</div>
-                    <div className="text-sm text-muted-foreground">Brand your help centre</div>
+                    <div className="font-medium">Create web widget flow</div>
+                    <div className="text-sm text-muted-foreground">Build and embed a help widget</div>
                   </div>
                 </Link>
               </div>
