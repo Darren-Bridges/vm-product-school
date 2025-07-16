@@ -340,39 +340,86 @@
             const yesBtn = elements.content.querySelector('.help-widget__article-feedback-yes');
             const noBtn = elements.content.querySelector('.help-widget__article-feedback-no');
             if (yesBtn) {
-              yesBtn.addEventListener('click', () => {
-                // Find outgoing edge labeled 'Yes'
-                const yesEdge = questionFlow
-                  .flatMap(n => n.options.map(opt => ({ from: n.id, ...opt })))
-                  .find(opt => opt.from === q.id && opt.label && opt.label.toLowerCase() === 'yes');
-                if (yesEdge && yesEdge.next) {
-                  renderQuestionFlow(yesEdge.next);
-                } else {
-                  elements.content.querySelector('.help-widget__article-feedback').innerHTML = '<div class="help-widget__article-feedback-thankyou">Thank you for your feedback!</div>';
+              yesBtn.addEventListener('click', async () => {
+                const feedbackDiv = elements.content.querySelector('.help-widget__article-feedback');
+                // POST feedback to API
+                try {
+                  await fetch(`${config.apiBaseUrl}/article/${article.id}/feedback`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'X-API-Key': config.apiKey,
+                    },
+                    body: JSON.stringify({
+                      feedback: 'yes',
+                      source: 'widget',
+                      page_path: window.location.pathname,
+                    }),
+                  });
+                } catch (e) { /* ignore */ }
+                // If in a flow, move to next node if exists
+                if (typeof renderQuestionFlow === 'function' && typeof questionFlow !== 'undefined' && typeof q !== 'undefined') {
+                  const yesEdge = questionFlow
+                    .flatMap(n => n.options.map(opt => ({ from: n.id, ...opt })))
+                    .find(opt => opt.from === q.id && opt.label && opt.label.toLowerCase() === 'yes');
+                  if (yesEdge && yesEdge.next) {
+                    renderQuestionFlow(yesEdge.next);
+                    return;
+                  }
+                }
+                if (feedbackDiv) {
+                  feedbackDiv.innerHTML = '<div class="help-widget__article-feedback-thankyou">Thank you for your feedback!</div>';
                 }
               });
             }
             if (noBtn) {
               noBtn.addEventListener('click', () => {
-                // Find outgoing edge labeled 'No'
-                const noEdge = questionFlow
-                  .flatMap(n => n.options.map(opt => ({ from: n.id, ...opt })))
-                  .find(opt => opt.from === q.id && opt.label && opt.label.toLowerCase() === 'no');
-                if (noEdge && noEdge.next) {
-                  // Check if the next node is a ticket/support form
-                  const nextNode = questionFlow.find(n => n.id === noEdge.next);
-                  if (nextNode && nextNode.type === 'ticket') {
-                    unresolvedArticleContext = {
-                      articleId: q.articleId,
-                      articleTitle: q.question || '',
-                    };
-                  } else {
-                    unresolvedArticleContext = null;
+                const feedbackDiv = elements.content.querySelector('.help-widget__article-feedback');
+                if (!feedbackDiv) return;
+                feedbackDiv.innerHTML = `
+                  <div class="help-widget__article-feedback-question">Please let us know why this article didn't help.</div>
+                  <textarea class="help-widget__article-feedback-reason" style="width:80%;min-width:220px;max-width:320px;min-height:60px;margin-bottom:8px;padding:10px 12px;background:#f8fafc;border:1.5px solid #8C4FFB;border-radius:6px;font-size:1rem;box-shadow:0 1px 4px rgba(140,79,251,0.06);transition:border 0.2s,box-shadow 0.2s;outline:none;display:block;margin-left:auto;margin-right:auto;"></textarea>
+                  <button class="help-widget__article-feedback-submit" style="padding:8px 18px;background:#8C4FFB;color:#fff;border:none;border-radius:4px;font-size:1rem;font-weight:600;cursor:pointer;">Submit Feedback</button>
+                `;
+                const submitBtn = feedbackDiv.querySelector('.help-widget__article-feedback-submit');
+                const reasonInput = feedbackDiv.querySelector('.help-widget__article-feedback-reason');
+                submitBtn.addEventListener('click', async () => {
+                  const reason = reasonInput.value.trim();
+                  if (!reason) {
+                    reasonInput.style.border = '1px solid #ef4444';
+                    reasonInput.focus();
+                    return;
                   }
-                  renderQuestionFlow(noEdge.next);
-                } else {
-                  elements.content.querySelector('.help-widget__article-feedback').innerHTML = '<div class="help-widget__article-feedback-thankyou">Thank you for your feedback!</div>';
-                }
+                  // POST feedback to API
+                  try {
+                    await fetch(`${config.apiBaseUrl}/article/${article.id}/feedback`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': config.apiKey,
+                      },
+                      body: JSON.stringify({
+                        feedback: 'no',
+                        reason,
+                        source: 'widget',
+                        page_path: window.location.pathname,
+                      }),
+                    });
+                  } catch (e) { /* ignore */ }
+                  // If in a flow, move to next node if exists
+                  if (typeof renderQuestionFlow === 'function' && typeof questionFlow !== 'undefined' && typeof q !== 'undefined') {
+                    const noEdge = questionFlow
+                      .flatMap(n => n.options.map(opt => ({ from: n.id, ...opt })))
+                      .find(opt => opt.from === q.id && opt.label && opt.label.toLowerCase() === 'no');
+                    if (noEdge && noEdge.next) {
+                      renderQuestionFlow(noEdge.next);
+                      return;
+                    }
+                  }
+                  if (feedbackDiv) {
+                    feedbackDiv.innerHTML = '<div class="help-widget__article-feedback-thankyou">Thank you for your feedback!</div>';
+                  }
+                });
               });
             }
           }, 0);
@@ -1286,16 +1333,90 @@
       }
     }
     // Add feedback handlers
+    const feedbackDiv = elements.content.querySelector('.help-widget__article-feedback');
     const yesBtn = elements.content.querySelector('.help-widget__article-feedback-yes');
     const noBtn = elements.content.querySelector('.help-widget__article-feedback-no');
     if (yesBtn) {
-      yesBtn.addEventListener('click', () => {
-        elements.content.querySelector('.help-widget__article-feedback').innerHTML = '<div class="help-widget__article-feedback-thankyou">Thank you for your feedback!</div>';
+      yesBtn.addEventListener('click', async () => {
+        const feedbackDiv = elements.content.querySelector('.help-widget__article-feedback');
+        // POST feedback to API
+        try {
+          await fetch(`${config.apiBaseUrl}/article/${article.id}/feedback`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-API-Key': config.apiKey,
+            },
+            body: JSON.stringify({
+              feedback: 'yes',
+              source: 'widget',
+              page_path: window.location.pathname,
+            }),
+          });
+        } catch (e) { /* ignore */ }
+        // If in a flow, move to next node if exists
+        if (typeof renderQuestionFlow === 'function' && typeof questionFlow !== 'undefined' && typeof q !== 'undefined') {
+          const yesEdge = questionFlow
+            .flatMap(n => n.options.map(opt => ({ from: n.id, ...opt })))
+            .find(opt => opt.from === q.id && opt.label && opt.label.toLowerCase() === 'yes');
+          if (yesEdge && yesEdge.next) {
+            renderQuestionFlow(yesEdge.next);
+            return;
+          }
+        }
+        if (feedbackDiv) {
+          feedbackDiv.innerHTML = '<div class="help-widget__article-feedback-thankyou">Thank you for your feedback!</div>';
+        }
       });
     }
     if (noBtn) {
       noBtn.addEventListener('click', () => {
-        elements.content.querySelector('.help-widget__article-feedback').innerHTML = '<div class="help-widget__article-feedback-thankyou">Thank you for your feedback!</div>';
+        const feedbackDiv = elements.content.querySelector('.help-widget__article-feedback');
+        if (!feedbackDiv) return;
+        feedbackDiv.innerHTML = `
+          <div class="help-widget__article-feedback-question">Please let us know why this article didn't help.</div>
+          <textarea class="help-widget__article-feedback-reason" style="width:80%;min-width:220px;max-width:320px;min-height:60px;margin-bottom:8px;padding:10px 12px;background:#f8fafc;border:1.5px solid #8C4FFB;border-radius:6px;font-size:1rem;box-shadow:0 1px 4px rgba(140,79,251,0.06);transition:border 0.2s,box-shadow 0.2s;outline:none;display:block;margin-left:auto;margin-right:auto;"></textarea>
+          <button class="help-widget__article-feedback-submit" style="padding:8px 18px;background:#8C4FFB;color:#fff;border:none;border-radius:4px;font-size:1rem;font-weight:600;cursor:pointer;">Submit Feedback</button>
+        `;
+        const submitBtn = feedbackDiv.querySelector('.help-widget__article-feedback-submit');
+        const reasonInput = feedbackDiv.querySelector('.help-widget__article-feedback-reason');
+        submitBtn.addEventListener('click', async () => {
+          const reason = reasonInput.value.trim();
+          if (!reason) {
+            reasonInput.style.border = '1px solid #ef4444';
+            reasonInput.focus();
+            return;
+          }
+          // POST feedback to API
+          try {
+            await fetch(`${config.apiBaseUrl}/article/${article.id}/feedback`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': config.apiKey,
+              },
+              body: JSON.stringify({
+                feedback: 'no',
+                reason,
+                source: 'widget',
+                page_path: window.location.pathname,
+              }),
+            });
+          } catch (e) { /* ignore */ }
+          // If in a flow, move to next node if exists
+          if (typeof renderQuestionFlow === 'function' && typeof questionFlow !== 'undefined' && typeof q !== 'undefined') {
+            const noEdge = questionFlow
+              .flatMap(n => n.options.map(opt => ({ from: n.id, ...opt })))
+              .find(opt => opt.from === q.id && opt.label && opt.label.toLowerCase() === 'no');
+            if (noEdge && noEdge.next) {
+              renderQuestionFlow(noEdge.next);
+              return;
+            }
+          }
+          if (feedbackDiv) {
+            feedbackDiv.innerHTML = '<div class="help-widget__article-feedback-thankyou">Thank you for your feedback!</div>';
+          }
+        });
       });
     }
 

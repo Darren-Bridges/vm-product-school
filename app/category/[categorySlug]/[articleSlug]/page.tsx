@@ -10,6 +10,7 @@ import { useAuth } from "../../../../context/AuthContext";
 import { getArticleAccessFilter } from "../../../../utils/accessControl";
 import { CategorySidebar, CategoryTreeNode } from "@/components/CategorySidebar";
 import { CategorySidebarMobile } from "@/components/CategorySidebar";
+import { useRouter } from "next/navigation";
 
 interface Category {
   id: string;
@@ -40,6 +41,12 @@ export default function CategoryArticlePage() {
   const [notFound, setNotFound] = useState(false);
   const { user, isSuperAdmin, userReady } = useAuth();
   const [allCategoryTrees, setAllCategoryTrees] = useState<CategoryTreeNode[]>([]);
+  const router = useRouter();
+  // Feedback state
+  const [feedbackState, setFeedbackState] = useState<'idle'|'yes'|'no'|'submitted'>('idle');
+  const [feedbackReason, setFeedbackReason] = useState('');
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string|null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -174,6 +181,106 @@ export default function CategoryArticlePage() {
         </div>
         <div className="w-full">
           <ArticleContentViewer content={article.content} />
+        </div>
+        {/* Feedback Section */}
+        <div className="mt-10 border-t pt-8">
+          {feedbackState === 'submitted' ? (
+            <div className="text-green-600 font-semibold">Thank you for your feedback!</div>
+          ) : (
+            <div>
+              <div className="font-semibold mb-2">Did this article solve your query?</div>
+              <div className="flex gap-4 mb-4">
+                <button
+                  className="px-4 py-2 rounded bg-green-500 text-white font-semibold disabled:opacity-50"
+                  disabled={feedbackLoading}
+                  onClick={async () => {
+                    setFeedbackLoading(true);
+                    setFeedbackError(null);
+                    try {
+                      const res = await fetch(`/api/widget/article/${article.id}/feedback`, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'X-API-Key': 'test-api-key-123',
+                        },
+                        body: JSON.stringify({
+                          feedback: 'yes',
+                          source: 'help_centre',
+                          user_email: user?.email || null,
+                          page_path: window.location.pathname,
+                        }),
+                      });
+                      if (!res.ok) throw new Error('Failed to submit feedback');
+                      setFeedbackState('submitted');
+                    } catch (e) {
+                      setFeedbackError('Could not submit feedback.');
+                    } finally {
+                      setFeedbackLoading(false);
+                    }
+                  }}
+                >
+                  Yes
+                </button>
+                <button
+                  className="px-4 py-2 rounded bg-red-500 text-white font-semibold disabled:opacity-50"
+                  disabled={feedbackLoading}
+                  onClick={() => setFeedbackState('no')}
+                >
+                  No
+                </button>
+              </div>
+              {feedbackState === 'no' && (
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setFeedbackLoading(true);
+                    setFeedbackError(null);
+                    try {
+                      const res = await fetch(`/api/widget/article/${article.id}/feedback`, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'X-API-Key': 'test-api-key-123',
+                        },
+                        body: JSON.stringify({
+                          feedback: 'no',
+                          reason: feedbackReason,
+                          source: 'help_centre',
+                          user_email: user?.email || null,
+                          page_path: window.location.pathname,
+                        }),
+                      });
+                      if (!res.ok) throw new Error('Failed to submit feedback');
+                      setFeedbackState('submitted');
+                    } catch (e) {
+                      setFeedbackError('Could not submit feedback.');
+                    } finally {
+                      setFeedbackLoading(false);
+                    }
+                  }}
+                  className="flex flex-col gap-2"
+                >
+                  <textarea
+                    className="border rounded p-2 min-h-[60px]"
+                    placeholder="Please let us know why this article didn't help."
+                    value={feedbackReason}
+                    onChange={e => setFeedbackReason(e.target.value)}
+                    required
+                    disabled={feedbackLoading}
+                  />
+                  <button
+                    type="submit"
+                    className="self-start px-4 py-2 rounded bg-blue-600 text-white font-semibold disabled:opacity-50"
+                    disabled={feedbackLoading || !feedbackReason.trim()}
+                  >
+                    Submit Feedback
+                  </button>
+                  {feedbackError && <div className="text-red-600">{feedbackError}</div>}
+                </form>
+              )}
+              {feedbackError && feedbackState !== 'no' && <div className="text-red-600">{feedbackError}</div>}
+            </div>
+          )}
         </div>
         {/* Mobile related articles below content */}
         <div className="block md:hidden mt-12">
