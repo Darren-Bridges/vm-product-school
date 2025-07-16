@@ -127,7 +127,7 @@ export default function ArticleFeedbackAdminPage() {
         <div className="flex flex-col md:flex-row gap-6 mb-8">
           <div className="bg-card border rounded-lg p-6 flex-1 flex flex-col items-center justify-center">
             <div className="text-2xl font-bold mb-1">{percentGood}%</div>
-            <div className="text-muted-foreground text-sm text-center">% of feedback that is &quot;good&quot;</div>
+            <div className="text-muted-foreground text-sm text-center">% of feedback is &quot;good&quot;</div>
           </div>
           <div className="bg-card border rounded-lg p-6 flex-1 min-w-[320px]">
             <div className="font-semibold mb-2 text-center">Feedback per Day</div>
@@ -148,7 +148,10 @@ export default function ArticleFeedbackAdminPage() {
         ) : error ? (
           <div className="text-red-600">{error}</div>
         ) : (
-          <DataTable columns={columns} data={feedback} />
+          <>
+            <h2 className="text-xl font-semibold mb-4">All Feedback</h2>
+            <DataTable columns={columns} data={feedback} showColumnsFilter={false} />
+          </>
         )}
       </div>
     </ProtectedAdminLayout>
