@@ -146,9 +146,19 @@ export default function EditArticlePage() {
 
     try {
       // Use the current slug state
+      const pathValue = path.trim() === "" ? null : path;
+
       const { error: articleError } = await supabase
         .from("articles")
-        .update({ title, slug, content, status, access_level: accessLevel, path, updated_at: new Date().toISOString() })
+        .update({ 
+          title, 
+          slug, 
+          content, 
+          status, 
+          access_level: accessLevel, 
+          path: pathValue, 
+          updated_at: new Date().toISOString() 
+        })
         .eq("id", articleId);
 
       if (articleError) {
