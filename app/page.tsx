@@ -75,6 +75,8 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    // Only fetch articles when user context is ready
+    if (user === undefined || isSuperAdmin === undefined) return;
     // Fetch all articles for search and what's new, filtered by access
     const fetchArticles = async () => {
       let articles = dataCache.getArticles();

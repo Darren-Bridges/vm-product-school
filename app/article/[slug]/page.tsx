@@ -45,12 +45,25 @@ export default function ArticlePage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const { user, isSuperAdmin } = useAuth();
+  const [userContextReady, setUserContextReady] = useState(false);
   const [allCategoryTrees, setAllCategoryTrees] = useState<CategoryTreeNode[]>([]);
 
+  // Track when user context is ready
   useEffect(() => {
+    if (user !== undefined && isSuperAdmin !== undefined) {
+      setUserContextReady(true);
+    }
+  }, [user, isSuperAdmin]);
+
+  useEffect(() => {
+    // Only fetch article when user context is ready
+    if (!userContextReady) return;
+    // Clear cache and reset state on user context change
+    dataCache.clearArticles();
+    setArticle(null);
+    setNotFound(false);
+    setLoading(true);
     const fetchArticle = async () => {
-      setLoading(true);
-      setNotFound(false);
       let articles = dataCache.getArticles();
       let categories = dataCache.getCategories();
       let articleCategories = dataCache.getArticleCategories();
@@ -126,9 +139,9 @@ export default function ArticlePage() {
       setLoading(false);
     };
     if (slug) fetchArticle();
-  }, [slug, user, isSuperAdmin]);
+  }, [slug, user, isSuperAdmin, userContextReady]);
 
-  if (loading) {
+  if (loading || !userContextReady) {
     return (
       <div className="flex w-full mt-20 gap-8 p-4 md:p-8">
         <aside className="w-64 hidden md:block">

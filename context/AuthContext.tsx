@@ -70,6 +70,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const isSuperAdmin = user?.role.displayName === "Super Admin";
 
+  // Clear cache when user role changes
+  useEffect(() => {
+    clearAllDataCache();
+  }, [user?.role?.displayName]);
+
   return (
     <AuthContext.Provider value={{ user, token, isSuperAdmin, login, logout }}>
       {children}
