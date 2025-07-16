@@ -1028,19 +1028,27 @@
     });
   }
 
-  // Add a simple fuzzy match helper
-  function fuzzyMatch(needle, haystack) {
-    if (!needle) return true;
-    if (!haystack) return false;
+  // Improved fuzzy match with scoring
+  function fuzzyScore(needle, haystack) {
+    if (!needle) return 0;
+    if (!haystack) return 0;
     needle = needle.toLowerCase();
     haystack = haystack.toLowerCase();
-    let hIdx = 0;
+
+    if (needle === haystack) return 100; // exact match
+    if (haystack.startsWith(needle)) return 90; // prefix match
+    if (haystack.includes(needle)) return 75; // substring match
+
+    // Fuzzy: count gaps between matched chars
+    let hIdx = 0, gaps = 0;
     for (let nIdx = 0; nIdx < needle.length; nIdx++) {
       hIdx = haystack.indexOf(needle[nIdx], hIdx);
-      if (hIdx === -1) return false;
+      if (hIdx === -1) return 0;
+      if (nIdx > 0 && hIdx > 0) gaps += hIdx;
       hIdx++;
     }
-    return true;
+    // Lower score for more gaps
+    return Math.max(50 - gaps, 1);
   }
 
   function handleSearch(event) {
@@ -1050,16 +1058,22 @@
       return;
     }
     if (query.length < 2) {
-      renderContent({ articles: allArticles });
+      renderContent({ articles: allArticles, isSearch: false });
       return;
     }
-    // Fuzzy client-side search: filter cached articles
-    const filtered = allArticles.filter(article => {
+    // Score and sort articles
+    const scored = allArticles.map(article => {
       const title = article.title ? article.title.toLowerCase() : '';
       const content = article.content ? article.content.toLowerCase() : '';
-      return fuzzyMatch(query, title) || fuzzyMatch(query, content);
-    });
-    renderContent({ articles: filtered });
+      let score = 0;
+      score += fuzzyScore(query, title) * 2; // weight title higher
+      score += fuzzyScore(query, content);
+      return { article, score };
+    }).filter(item => item.score > 0);
+
+    scored.sort((a, b) => b.score - a.score);
+
+    renderContent({ articles: scored.map(item => item.article), isSearch: true });
   }
 
   /**
@@ -1072,7 +1086,38 @@
       return;
     }
 
-    // Group articles by category
+    // If this is a search, show a flat, ranked list
+    if (data.isSearch) {
+      let html = '';
+      data.articles.forEach(article => {
+        let text = article.content ? article.content.replace(/<[^>]+>/g, '') : '';
+        let preview = text.length > 120 ? text.slice(0, 120) + '…' : text;
+        html += `
+          <div class="help-widget__article">
+            <h4 class="help-widget__article-title">
+              <a href="#" data-article-id="${article.id}" class="help-widget__article-link">
+                ${article.title}
+              </a>
+            </h4>
+            <p class="help-widget__article-excerpt">${preview}</p>
+          </div>
+        `;
+      });
+      elements.content.innerHTML = html;
+      // Add click handlers for article links
+      const articleLinks = elements.content.querySelectorAll('.help-widget__article-link');
+      articleLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation(); // Prevent event bubbling
+          const articleId = link.getAttribute('data-article-id');
+          loadArticleContent(articleId);
+        });
+      });
+      return;
+    }
+
+    // Group articles by category (default view)
     const categoryMap = {};
     const uncategorized = [];
     data.articles.forEach(article => {
