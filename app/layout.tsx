@@ -16,6 +16,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="icon" type="image/svg+xml" href="/VMlogo.62080a51e68bffbddd39660df08de35e.svg" />
+      </head>
       <body>
         <ThemeProvider
           attribute="class"
