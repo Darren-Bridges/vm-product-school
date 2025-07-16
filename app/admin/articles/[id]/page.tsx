@@ -36,6 +36,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "../../../../components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../../components/ui/table";
 import { getAvailableAccessLevels } from "../../../../utils/accessControl";
 
 function slugify(text: string) {
@@ -43,6 +44,18 @@ function slugify(text: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)+/g, '');
+}
+
+// Define Feedback type for feedback rows
+interface Feedback {
+  id: string;
+  article_id: string;
+  feedback: string;
+  reason?: string;
+  source: string;
+  user_email?: string;
+  page_path?: string;
+  created_at: string;
 }
 
 export default function EditArticlePage() {
@@ -68,10 +81,37 @@ export default function EditArticlePage() {
   const [slug, setSlug] = useState("");
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [path, setPath] = useState("");
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+  const [articleFeedback, setArticleFeedback] = useState<Feedback[]>([]);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
 
   // Get user role based on isSuperAdmin
   const userRole = isSuperAdmin ? 'superadmin' : 'user';
   const availableAccessLevels = getAvailableAccessLevels(userRole);
+
+  // Fetch feedback for this article when modal opens
+  useEffect(() => {
+    if (feedbackModalOpen && articleId) {
+      setFeedbackLoading(true);
+      setFeedbackError(null);
+      supabase
+        .from("article_feedback")
+        .select("*")
+        .eq("article_id", articleId)
+        .order("created_at", { ascending: false })
+        .then(({ data, error }) => {
+          if (error) setFeedbackError("Failed to load feedback");
+          else setArticleFeedback(data || []);
+          setFeedbackLoading(false);
+        });
+    }
+  }, [feedbackModalOpen, articleId]);
+
+  // Calculate percent good for this article
+  const total = articleFeedback.length;
+  const good = articleFeedback.filter(f => f.feedback === 'yes').length;
+  const percentGood = total > 0 ? Math.round((good / total) * 100) : 0;
 
   const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSlug(e.target.value);
@@ -288,6 +328,9 @@ export default function EditArticlePage() {
                 <Link href={`/admin/articles/${articleId}/preview`}>Preview</Link>
               </Button>
             )}
+            <Button variant="secondary" onClick={() => setFeedbackModalOpen(true)}>
+              View feedback
+            </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button size="icon" variant="ghost" aria-label="More options">
@@ -372,6 +415,58 @@ export default function EditArticlePage() {
                 <Button type="submit" disabled={!linkUrl}>Save</Button>
               </DialogFooter>
             </form>
+          </DialogContent>
+        </Dialog>
+        
+        {/* Feedback Modal */}
+        <Dialog open={feedbackModalOpen} onOpenChange={setFeedbackModalOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Feedback for this Article</DialogTitle>
+            </DialogHeader>
+            <div className="mb-4 flex flex-col items-center">
+              <div className="text-2xl font-bold mb-1">{percentGood}%</div>
+              <div className="text-muted-foreground text-sm">of feedback is &quot;good&quot;</div>
+            </div>
+            {feedbackLoading ? (
+              <div>Loading...</div>
+            ) : feedbackError ? (
+              <div className="text-red-600">{feedbackError}</div>
+            ) : articleFeedback.length === 0 ? (
+              <div className="text-muted-foreground">No feedback for this article yet.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Feedback</TableHead>
+                      <TableHead>Reason</TableHead>
+                      <TableHead>Source</TableHead>
+                      <TableHead>User Email</TableHead>
+                      <TableHead>Page Path</TableHead>
+                      <TableHead>Created At</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {articleFeedback.map(fb => (
+                      <TableRow key={fb.id}>
+                        <TableCell>{fb.feedback === 'yes' ? '✅ Yes' : '❌ No'}</TableCell>
+                        <TableCell>{fb.reason || ''}</TableCell>
+                        <TableCell>{fb.source}</TableCell>
+                        <TableCell>{fb.user_email || ''}</TableCell>
+                        <TableCell>{fb.page_path || ''}</TableCell>
+                        <TableCell>{new Date(fb.created_at).toLocaleString()}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="outline">Close</Button>
+              </DialogClose>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
         

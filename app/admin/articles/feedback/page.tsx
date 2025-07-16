@@ -24,7 +24,17 @@ const columns: ColumnDef<Feedback>[] = [
   {
     accessorKey: "article_title",
     header: "Article Title",
-    cell: ({ row }) => (row.original as Feedback).article_title || (row.original as Feedback).article_id,
+    cell: ({ row }) => {
+      const original = row.original as Feedback;
+      return (
+        <Link
+          href={`/admin/articles/${original.article_id}`}
+          className="text-blue-600 hover:underline"
+        >
+          {original.article_title || original.article_id}
+        </Link>
+      );
+    },
   },
   {
     accessorKey: "feedback",
