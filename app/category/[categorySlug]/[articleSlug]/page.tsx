@@ -205,7 +205,7 @@ export default function CategoryArticlePage() {
                           feedback: 'yes',
                           source: 'help_centre',
                           user_email: user?.email || null,
-                          page_path: window.location.pathname,
+                          page_path: window.location.href,
                         }),
                       });
                       if (!res.ok) throw new Error('Failed to submit feedback');
@@ -244,7 +244,7 @@ export default function CategoryArticlePage() {
                           reason: feedbackReason,
                           source: 'help_centre',
                           user_email: user?.email || null,
-                          page_path: window.location.pathname,
+                          page_path: window.location.href,
                         }),
                       });
                       if (!res.ok) throw new Error('Failed to submit feedback');

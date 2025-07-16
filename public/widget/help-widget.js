@@ -353,7 +353,7 @@
                     body: JSON.stringify({
                       feedback: 'yes',
                       source: 'widget',
-                      page_path: window.location.pathname,
+                      page_path: window.location.href,
                     }),
                   });
                 } catch (e) { /* ignore */ }
@@ -402,7 +402,7 @@
                         feedback: 'no',
                         reason,
                         source: 'widget',
-                        page_path: window.location.pathname,
+                        page_path: window.location.href,
                       }),
                     });
                   } catch (e) { /* ignore */ }
@@ -1350,7 +1350,7 @@
             body: JSON.stringify({
               feedback: 'yes',
               source: 'widget',
-              page_path: window.location.pathname,
+              page_path: window.location.href,
             }),
           });
         } catch (e) { /* ignore */ }
@@ -1399,7 +1399,7 @@
                 feedback: 'no',
                 reason,
                 source: 'widget',
-                page_path: window.location.pathname,
+                page_path: window.location.href,
               }),
             });
           } catch (e) { /* ignore */ }
