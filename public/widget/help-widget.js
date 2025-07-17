@@ -606,17 +606,20 @@
       entry.status = resp.status;
       entry.statusText = resp.statusText;
       entry.durationMs = Date.now() - start;
-      // Try to clone and get text (limit size)
-      try {
-        const clone = resp.clone();
-        const text = await clone.text();
-        entry.response = text.length > 500 ? text.slice(0, 500) + '…' : text;
-      } catch {}
+      // Only include response for failed requests (4xx or 5xx)
+      if (resp.status >= 400) {
+        try {
+          const clone = resp.clone();
+          const text = await clone.text();
+          entry.response = text.length > 500 ? text.slice(0, 500) + '…' : text;
+        } catch {}
+      }
       pushNetwork(entry);
       return resp;
     } catch (err) {
       entry.error = err && err.message;
       entry.durationMs = Date.now() - start;
+      // Optionally include error response if available (not typical for fetch errors)
       pushNetwork(entry);
       throw err;
     }
@@ -638,14 +641,18 @@
       entry.status = xhr.status;
       entry.statusText = xhr.statusText;
       entry.durationMs = Date.now() - start;
-      try {
-        entry.response = xhr.responseText && xhr.responseText.length > 500 ? xhr.responseText.slice(0, 500) + '…' : xhr.responseText;
-      } catch {}
+      // Only include response for failed requests (4xx or 5xx)
+      if (xhr.status >= 400) {
+        try {
+          entry.response = xhr.responseText && xhr.responseText.length > 500 ? xhr.responseText.slice(0, 500) + '…' : xhr.responseText;
+        } catch {}
+      }
       pushNetwork(entry);
     });
     xhr.addEventListener('error', function() {
       entry.error = 'Network error';
       entry.durationMs = Date.now() - start;
+      // Optionally include error response if available
       pushNetwork(entry);
     });
     return xhr;
