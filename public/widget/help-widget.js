@@ -2593,7 +2593,7 @@
         const consoleErrors = capturedConsole
           .filter(entry => entry.type === 'error')
           .map(entry => `[${entry.ts}] ${entry.args.join(' ')}`)
-          .slice(-10); // Only last 10
+          .slice(-50); // Only last 50
         // Extract network errors (status >= 400 or error property)
         const networkErrors = capturedNetwork
           .filter(entry => (entry.status && entry.status >= 400) || entry.error)
@@ -2603,7 +2603,7 @@
             if (entry.error) msg += ` Error: ${entry.error}`;
             return msg;
           })
-          .slice(-10); // Only last 10
+          .slice(-50); // Only last 50
         let errorSummary = '';
         if (consoleErrors.length || networkErrors.length) {
           errorSummary = '\n\n---\nRecent Errors Detected:\n';
@@ -2646,7 +2646,7 @@
           try {
             const canvas = await window.html2canvas(document.body, {useCORS:true, logging:false, backgroundColor:null});
             const screenshot = canvas.toDataURL('image/png');
-            const ticket = { name, email, message: messageWithErrors, file: fileInfo, screenshot, console: capturedConsole.slice(-10), network: capturedNetwork.slice(-10), video: videoAttachment, localStorage: localStorageAttachment, priority: ticketPriority };
+            const ticket = { name, email, message: messageWithErrors, file: fileInfo, screenshot, console: capturedConsole.slice(-50), network: capturedNetwork.slice(-50), video: videoAttachment, localStorage: localStorageAttachment, priority: ticketPriority };
             // Submit to backend
             fetch(withRoleParam(`${config.apiBaseUrl}/support-ticket`), {
               method: 'POST',
