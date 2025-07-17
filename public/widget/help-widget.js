@@ -2593,7 +2593,7 @@
         const consoleErrors = capturedConsole
           .filter(entry => entry.type === 'error')
           .map(entry => `[${entry.ts}] ${entry.args.join(' ')}`)
-          .slice(-20); // Only last 20
+          .slice(-10); // Only last 20
         // Extract network errors (status >= 400 or error property)
         const networkErrors = capturedNetwork
           .filter(entry => (entry.status && entry.status >= 400) || entry.error)
@@ -2603,7 +2603,7 @@
             if (entry.error) msg += ` Error: ${entry.error}`;
             return msg;
           })
-          .slice(-20); // Only last 20
+          .slice(-10); // Only last 20
         let errorSummary = '';
         if (consoleErrors.length || networkErrors.length) {
           errorSummary = '\n\n---\nRecent Errors Detected:\n';
