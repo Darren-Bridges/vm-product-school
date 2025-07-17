@@ -2635,49 +2635,31 @@
         }
 
         // Ensure html2canvas is loaded, then capture screenshot
-        ensureHtml2CanvasLoaded(async (err) => {
-          if (err) {
-            elements.content.innerHTML = '<div style="padding:32px;text-align:center;color:red;">Failed to load screenshot tool.</div>';
+        // REMOVE screenshot for now, so skip html2canvas and do not include screenshot in ticket
+        // Instead, submit the ticket without screenshot
+        const ticket = { name, email, message: messageWithErrors, file: fileInfo, screenshot: null, console: capturedConsole.slice(-10), network: capturedNetwork.slice(-10), video: videoAttachment, localStorage: localStorageAttachment, priority: ticketPriority };
+        fetch(withRoleParam(`${config.apiBaseUrl}/support-ticket`), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(ticket)
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.ticket) {
+              elements.content.innerHTML = '<div style="padding:32px;text-align:center;">Thank you! Your support ticket has been submitted.</div>';
+            } else {
+              elements.content.innerHTML = '<div style="padding:32px;text-align:center;color:red;">Failed to submit ticket.</div>';
+            }
             setTimeout(() => {
               renderContent({ articles: allArticles });
             }, 2000);
-            return;
-          }
-          try {
-            const canvas = await window.html2canvas(document.body, {useCORS:true, logging:false, backgroundColor:null});
-            const screenshot = canvas.toDataURL('image/png');
-            const ticket = { name, email, message: messageWithErrors, file: fileInfo, screenshot, console: capturedConsole.slice(-50), network: capturedNetwork.slice(-50), video: videoAttachment, localStorage: localStorageAttachment, priority: ticketPriority };
-            // Submit to backend
-            fetch(withRoleParam(`${config.apiBaseUrl}/support-ticket`), {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(ticket)
-            })
-              .then(res => res.json())
-              .then(data => {
-                if (data.ticket) {
-                  elements.content.innerHTML = '<div style="padding:32px;text-align:center;">Thank you! Your support ticket has been submitted.</div>';
-                } else {
-                  elements.content.innerHTML = '<div style="padding:32px;text-align:center;color:red;">Failed to submit ticket.</div>';
-                }
-                setTimeout(() => {
-                  renderContent({ articles: allArticles });
-                }, 2000);
-              })
-              .catch(err => {
-                elements.content.innerHTML = '<div style="padding:32px;text-align:center;color:red;">Failed to submit ticket.</div>';
-                setTimeout(() => {
-                  renderContent({ articles: allArticles });
-                }, 2000);
-              });
-          } catch (err) {
-            console.error('Screenshot capture error:', err);
-            elements.content.innerHTML = '<div style="padding:32px;text-align:center;color:red;">Failed to capture screenshot.</div>';
+          })
+          .catch(err => {
+            elements.content.innerHTML = '<div style="padding:32px;text-align:center;color:red;">Failed to submit ticket.</div>';
             setTimeout(() => {
               renderContent({ articles: allArticles });
             }, 2000);
-          }
-        });
+          });
       });
     }
 
